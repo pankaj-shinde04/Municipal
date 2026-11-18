@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Municipal Performance Audit Report — CivicConnect</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        font-size: 11pt;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      @page {
+        margin: 1.2cm;
+        size: A4 portrait;
+      }
+      .shadow-sm, .shadow-md, .shadow-xl, .shadow-2xl {
+        box-shadow: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen py-8">
+
+  <!-- Floating Action Bar (Hidden on Print) -->
+  <div class="no-print max-w-5xl mx-auto mb-6 px-4">
+    <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-black text-lg">
+          CC
+        </div>
+        <div>
+          <h2 class="font-extrabold text-sm leading-tight">Municipal Audit & Performance Report</h2>
+          <p class="text-xs text-slate-400">Generated for City Council Review & Operational Auditing</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="{% url 'super_admin_dashboard' %}" class="px-4 py-2 text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition no-underline">
+          &larr; Back to Dashboard
+        </a>
+        <a href="{% url 'super_admin_export_csv' %}" class="px-4 py-2 text-xs font-bold text-indigo-300 hover:text-white bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/50 rounded-xl transition no-underline flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          Download CSV
+        </a>
+        <button onclick="window.print()" class="px-5 py-2 text-xs font-black uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+          Print / Save as PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Printable Document Container -->
+  <div class="max-w-5xl mx-auto bg-white border border-slate-200 rounded-3xl p-8 sm:p-12 shadow-2xl relative">
+    
+    <!-- Report Header & Government Branding -->
+    <header class="border-b-2 border-slate-900 pb-8 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
+      <div>
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black text-xl shadow-md">
+            🏛️
+          </div>
+          <div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight uppercase">SmartCivic Municipal Corporation</h1>
+            <p class="text-xs font-bold text-slate-500 tracking-wider uppercase">Urban Infrastructure & Civic Operations Directorate</p>
+          </div>
+        </div>
+        <h2 class="text-3xl font-black text-indigo-900 tracking-tight">Executive Performance Audit</h2>
+        <p class="text-sm text-slate-500 mt-1">Official performance evaluation for city council review and statutory compliance.</p>
+      </div>
+      <div class="text-left sm:text-right font-mono text-xs text-slate-600 space-y-1 bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <div><strong class="text-slate-900">Report Ref:</strong> AUD-{{ generated_at|date:"Ymd-His" }}</div>
+        <div><strong class="text-slate-900">Audit Date:</strong> {{ generated_at|date:"F d, Y — h:i A" }}</div>
+        <div><strong class="text-slate-900">Jurisdiction:</strong> City Municipal Ward Grid</div>
+        <div><strong class="text-slate-900">Classification:</strong> Official Council Record</div>
+      </div>
+    </header>
+
+    <!-- Executive Summary KPIs Grid -->
+    <section class="mb-10">
+      <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-indigo-600"></span> Executive Key Metrics
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Issues</p>
+          <p class="text-3xl font-black text-slate-900">{{ total_issues }}</p>
+          <p class="text-[10px] text-slate-400 mt-1">All Recorded</p>
+        </div>
+
+        <div class="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100 text-center">
+          <p class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Active Ops</p>
+          <p class="text-3xl font-black text-indigo-900">{{ active_count }}</p>
+          <p class="text-[10px] text-indigo-500 mt-1">Under Treatment</p>
+        </div>
+
+        <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-center">
+          <p class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Resolved</p>
+          <p class="text-3xl font-black text-emerald-900">{{ resolved_count }}</p>
+          <p class="text-[10px] text-emerald-600 mt-1">Verified & Closed</p>
+        </div>
+
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Resolution Rate</p>
+          <p class="text-3xl font-black {% if resolution_rate >= 75 %}text-emerald-700{% elif resolution_rate >= 50 %}text-amber-700{% else %}text-rose-700{% endif %}">
+            {{ resolution_rate }}%
+          </p>
+          <p class="text-[10px] text-slate-400 mt-1">Efficiency Ratio</p>
+        </div>
+
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Avg Turnaround</p>
+          <p class="text-2xl font-black text-slate-800">{{ avg_res_hours }}h</p>
+          <p class="text-[10px] text-slate-400 mt-1">Mean Resolution</p>
+        </div>
+
+        <div class="p-4 {% if sla_breach_count > 0 %}bg-rose-50 border-rose-200{% else %}bg-slate-50 border-slate-200{% endif %} rounded-2xl border text-center">
+          <p class="text-[10px] font-bold {% if sla_breach_count > 0 %}text-rose-700{% else %}text-slate-500{% endif %} uppercase tracking-wider mb-1">SLA Breaches</p>
+          <p class="text-3xl font-black {% if sla_breach_count > 0 %}text-rose-700{% else %}text-slate-800{% endif %}">{{ sla_breach_count }}</p>
+          <p class="text-[10px] text-slate-400 mt-1">Overdue Complaints</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLA Breach Risk Alert Section -->
+    {% if sla_breaches %}
+    <section class="mb-10 bg-rose-50/60 border border-rose-200 rounded-2xl p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="w-3 h-3 rounded-full bg-rose-600 animate-pulse"></span>
+        <h3 class="text-base font-black text-rose-900 tracking-tight">Active SLA Breach Alert ({{ sla_breaches|length }} Overdue Tasks)</h3>
+      </div>
+      <p class="text-xs text-rose-700 font-medium mb-4">
+        The following civic complaints have exceeded the municipal statutory response threshold without certified closure. Department heads must prioritize these tickets immediately.
+      </p>
+      <div class="overflow-x-auto rounded-xl border border-rose-200 bg-white">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-rose-100/70 text-rose-900 font-black border-b border-rose-200">
+              <th class="p-3">ID</th>
+              <th class="p-3">Department</th>
+              <th class="p-3">Category</th>
+              <th class="p-3">Priority</th>
+              <th class="p-3">Assigned Operative</th>
+              <th class="p-3">SLA Threshold</th>
+              <th class="p-3">Elapsed Time</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-rose-100">
+            {% for b in sla_breaches %}
+            <tr class="hover:bg-rose-50/50">
+              <td class="p-3 font-mono font-bold text-slate-900">#{{ b.complaint_id }}</td>
+              <td class="p-3 font-semibold">{{ b.department.name|default:"General" }}</td>
+              <td class="p-3">{{ b.category }}</td>
+              <td class="p-3 font-bold text-rose-700">{{ b.priority }}</td>
+              <td class="p-3">{{ b.worker_name }}</td>
+              <td class="p-3 font-mono">{{ b.sla_hours_threshold }}h max</td>
+              <td class="p-3 font-bold text-rose-800">{{ b.created_at|timesince }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Department Performance Scorecard -->
+    <section class="mb-10">
+      <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-slate-900"></span> Departmental Performance Scorecard
+      </h3>
+      <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-slate-700 font-black border-b border-slate-200 uppercase tracking-wider text-[11px]">
+              <th class="p-4">Department</th>
+              <th class="p-4">Assigned Admin</th>
+              <th class="p-4 text-center">Total Volume</th>
+              <th class="p-4 text-center">Active Ops</th>
+              <th class="p-4 text-center">Resolved</th>
+              <th class="p-4 text-center">Resolution Rate</th>
+              <th class="p-4 text-center">SLA Breaches</th>
+              <th class="p-4 text-right">Rating Grade</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for d in dept_summaries %}
+            <tr class="hover:bg-slate-50/80 transition-colors">
+              <td class="p-4 font-bold text-slate-900 text-sm">{{ d.name }}</td>
+              <td class="p-4 text-slate-600">{{ d.admin }}</td>
+              <td class="p-4 text-center font-bold font-mono">{{ d.total }}</td>
+              <td class="p-4 text-center font-bold text-indigo-700 font-mono">{{ d.active }}</td>
+              <td class="p-4 text-center font-bold text-emerald-700 font-mono">{{ d.resolved }}</td>
+              <td class="p-4 text-center">
+                <span class="inline-block px-2 py-0.5 rounded-full font-black text-xs {% if d.rate >= 80 %}bg-emerald-100 text-emerald-800{% elif d.rate >= 50 %}bg-amber-100 text-amber-800{% else %}bg-rose-100 text-rose-800{% endif %}">
+                  {{ d.rate }}%
+                </span>
+              </td>
+              <td class="p-4 text-center font-bold {% if d.breaches > 0 %}text-rose-600{% else %}text-slate-400{% endif %} font-mono">
+                {{ d.breaches }}
+              </td>
+              <td class="p-4 text-right">
+                {% if d.rate >= 90 %}
+                  <span class="text-emerald-700 font-black">⭐⭐⭐⭐⭐ 5.0</span>
+                {% elif d.rate >= 75 %}
+                  <span class="text-blue-700 font-black">⭐⭐⭐⭐ 4.2</span>
+                {% elif d.rate >= 50 %}
+                  <span class="text-amber-700 font-black">⭐⭐⭐ 3.5</span>
+                {% else %}
+                  <span class="text-rose-700 font-black">⭐⭐ 2.4</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8" class="p-6 text-center text-slate-400">No departments configured.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Comprehensive Audit Register -->
+    <section class="mb-12">
+      <div class="flex justify-between items-end mb-4">
+        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-indigo-600"></span> Comprehensive Civic Audit Register (Last {{ issues|length }} Issues)
+        </h3>
+        <span class="text-xs text-slate-400 font-mono">Sorted chronologically</span>
+      </div>
+      
+      <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-slate-700 font-black border-b border-slate-200 uppercase tracking-wider text-[10px]">
+              <th class="p-3">ID</th>
+              <th class="p-3">Department</th>
+              <th class="p-3">Category</th>
+              <th class="p-3">Priority</th>
+              <th class="p-3">Status</th>
+              <th class="p-3">SLA Compliance</th>
+              <th class="p-3">Citizen</th>
+              <th class="p-3">Operative</th>
+              <th class="p-3 text-right">Submitted</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for iss in issues %}
+            <tr class="hover:bg-slate-50/50">
+              <td class="p-3 font-mono font-bold text-slate-900">#{{ iss.complaint_id }}</td>
+              <td class="p-3 font-semibold text-slate-800">{{ iss.department.name|default:"General" }}</td>
+              <td class="p-3">{{ iss.category }}</td>
+              <td class="p-3 font-bold {% if iss.priority == 'High' %}text-rose-600{% elif iss.priority == 'Medium' %}text-amber-600{% else %}text-slate-600{% endif %}">
+                {{ iss.priority }}
+              </td>
+              <td class="p-3">
+                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold border 
+                  {% if iss.status == 'Submitted' %}border-slate-300 text-slate-700 bg-slate-50
+                  {% elif iss.status == 'Assigned' %}border-blue-200 text-blue-700 bg-blue-50
+                  {% elif iss.status == 'In Progress' %}border-indigo-200 text-indigo-700 bg-indigo-50
+                  {% elif iss.status == 'Resolved' %}border-yellow-200 text-yellow-700 bg-yellow-50
+                  {% elif iss.status == 'Closed' %}border-emerald-200 text-emerald-700 bg-emerald-50
+                  {% else %}border-slate-200 text-slate-600 bg-white{% endif %}">
+                  {{ iss.status }}
+                </span>
+              </td>
+              <td class="p-3">
+                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold 
+                  {% if iss.sla_status_label == 'Met SLA' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                  {% elif iss.sla_status_label == 'On Track' %}bg-blue-50 text-blue-700 border border-blue-200
+                  {% else %}bg-rose-50 text-rose-700 border border-rose-200 font-extrabold{% endif %}">
+                  {{ iss.sla_status_label }}
+                </span>
+              </td>
+              <td class="p-3 text-slate-600">{{ iss.citizen_name }}</td>
+              <td class="p-3 text-slate-600">{{ iss.worker_name }}</td>
+              <td class="p-3 text-right font-mono text-slate-400 text-[11px]">{{ iss.created_at|date:"M d, Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9" class="p-8 text-center text-slate-400">No civic issues registered yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Municipal Audit Sign-Off Footer -->
+    <footer class="pt-8 border-t-2 border-slate-900 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 text-xs text-slate-500">
+      <div>
+        <p class="font-bold text-slate-800">SmartCivic Governance System</p>
+        <p>Verified Municipal Audit Data &bull; Cryptographically Hashed Register</p>
+      </div>
+      <div class="space-y-1 text-left sm:text-right">
+        <p><strong class="text-slate-800">Authorized by:</strong> Municipal Commissioner Office</p>
+        <p class="font-mono text-[10px] text-slate-400">CERT-ID: {{ generated_at|date:"Ymd" }}-SC-COUNCIL-001</p>
+      </div>
+    </footer>
+
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lodge a Report - Civic Reporting Engine - CivicConnect{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 font-sans flex flex-col relative overflow-hidden">
+    <!-- Top Navigation Bar -->
+    <nav
+        class="bg-white border-b border-gray-200 sticky top-0 z-40 px-6 py-4 shadow-sm flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div
+                class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-700 flex items-center justify-center text-white font-black text-lg shadow-md shadow-indigo-600/20">
+                C
+            </div>
+            <div>
+                <h1 class="text-lg font-black text-gray-900 tracking-tight leading-tight">CivicConnect</h1>
+                <p class="text-xs font-semibold text-gray-500">Civic Reporting Engine</p>
+            </div>
+        </div>
+        <a href="{% url 'citizen_dashboard' %}"
+            class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition no-underline">
+            &larr; Back to Dashboard
+        </a>
+    </nav>
+
+    <!-- Decorative Background Elements -->
+    <div
+        class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-indigo-900 via-violet-900 to-slate-50 overflow-hidden -z-10">
+        <div
+            class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-500/20 blur-[100px] animate-pulse">
+        </div>
+        <div class="absolute top-[20%] right-[-5%] w-[400px] h-[400px] rounded-full bg-violet-500/20 blur-[100px] animate-pulse"
+            style="animation-delay: 2s;"></div>
+    </div>
+
+    <main class="flex-1 w-full max-w-4xl mx-auto px-6 py-12 pb-24 relative z-10">
+
+        <header class="text-center mb-16 relative z-20">
+            <div
+                class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white shadow-xl shadow-indigo-900/5 mb-6 border border-slate-100">
+                <svg class="w-10 h-10 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight drop-shadow-sm">Lodge a Report</h1>
+            <p class="mt-4 text-lg text-slate-600 max-w-2xl mx-auto font-medium">
+                Help us improve your neighborhood. Upload a photo, pick the right category, and tag the location to
+                automatically dispatch the nearest civic worker.
+            </p>
+        </header>
+
+        <form id="reportIssueForm" method="POST" action="{% url 'report_issue' %}" enctype="multipart/form-data"
+            class="bg-white/90 backdrop-blur-xl border border-white rounded-[2rem] shadow-2xl shadow-indigo-900/10 p-8 sm:p-12 relative z-10">
+            {% csrf_token %}
+
+            <!-- Subtle form glow -->
+            <div
+                class="absolute -top-40 -right-40 w-80 h-80 bg-indigo-50 rounded-full blur-3xl opacity-50 pointer-events-none -z-10">
+            </div>
+
+            <!-- Messages Alert -->
+            {% if messages %}
+            {% for msg in messages %}
+            <div
+                class="mb-8 p-4 rounded-2xl text-sm font-bold border shadow-sm {% if 'error' in msg.tags %}bg-rose-50 text-rose-700 border-rose-200{% else %}bg-emerald-50 text-emerald-700 border-emerald-200{% endif %}">
+                {{ msg }}
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            <div class="space-y-8 relative z-10">
+                <!-- Category (Department) -->
+                <div class="group">
+                    <label class="block text-sm font-bold text-slate-700 mb-2 tracking-wide uppercase">Issue
+                        Category</label>
+                    <select required name="department_id" id="departmentSelect"
+                        class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-0 focus:border-indigo-500 focus:bg-white transition-all text-slate-900 font-medium appearance-none hover:border-slate-300 shadow-sm cursor-pointer"
+                        style="background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E&quot;); background-position: right 1rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em;">
+                        <option value="" disabled selected>Select the most relevant department...</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}" data-name="{{ dept.name }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="category" id="hiddenCategory" value="General" />
+                </div>
+
+                <!-- Description -->
+                <div class="group">
+                    <label class="block text-sm font-bold text-slate-700 mb-2 tracking-wide uppercase">Incident
+                        Description</label>
+                    <textarea required name="description" rows="4"
+                        class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-0 focus:border-indigo-500 focus:bg-white transition-all text-slate-900 resize-none hover:border-slate-300 shadow-sm leading-relaxed"
+                        placeholder="Please describe the issue in detail (e.g. A large pothole on Main St causing traffic slowdowns...)"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
+                    <!-- Image Upload -->
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2 tracking-wide uppercase">Photographic
+                            Proof</label>
+                        <input type="file" name="image" id="fileInput" accept="image/*" capture="environment"
+                            class="hidden" onchange="handleImagePreview(event)" />
+
+                        <div id="dropZone" onclick="document.getElementById('fileInput').click()"
+                            class="border-2 border-dashed border-slate-300 bg-slate-50 hover:border-indigo-400 hover:bg-slate-100 shadow-sm rounded-[2rem] p-6 flex flex-col items-center justify-center cursor-pointer transition-all h-56 relative overflow-hidden group">
+                            <div id="uploadPlaceholder"
+                                class="text-center group-hover:-translate-y-1 transition-transform duration-300">
+                                <div
+                                    class="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-4 group-hover:shadow-md transition-all text-slate-400 group-hover:text-indigo-500 border border-slate-100">
+                                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <span
+                                    class="text-base font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">Tap
+                                    to attach photo</span>
+                                <p class="text-xs text-slate-500 mt-2 font-medium">JPEG, PNG, WebP up to 5MB</p>
+                            </div>
+
+                            <!-- Preview State -->
+                            <img id="imagePreview" src="" alt="Preview"
+                                class="absolute inset-0 w-full h-full object-cover hidden group-hover:scale-105 transition-transform duration-500" />
+                            <div id="replaceOverlay"
+                                class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity hidden items-center justify-center">
+                                <span
+                                    class="bg-white/20 backdrop-blur-md text-white font-bold py-2 px-4 rounded-xl border border-white/30 text-sm">Replace
+                                    Image</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location Capture -->
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2 tracking-wide uppercase">Exact
+                            Coordinates & Address</label>
+
+                        <div
+                            class="bg-slate-50 border-2 border-slate-200 rounded-[2rem] p-6 flex flex-col items-center justify-center h-56 shadow-sm overflow-hidden relative">
+                            <!-- Unlocked State -->
+                            <div id="unlockedLocationState" class="text-center w-full">
+                                <div
+                                    class="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-4 border border-slate-100 text-slate-400">
+                                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </div>
+                                <button type="button" id="gpsAcquireBtn" onclick="acquireGPSLocation()"
+                                    class="w-full py-3.5 px-6 bg-white border-2 border-slate-200 shadow-sm text-sm font-bold text-slate-700 rounded-2xl transition-all hover:border-indigo-400 hover:text-indigo-600 hover:-translate-y-1 hover:shadow-md focus:ring-4 focus:ring-indigo-500/20">
+                                    Acquire GPS Coordinates
+                                </button>
+                                <p id="locationErrorMsg" class="text-xs font-medium text-red-500 mt-3 hidden"></p>
+                            </div>
+
+                            <!-- Locked State -->
+                            <div id="lockedLocationState"
+                                class="text-center w-full z-10 hidden animate-in zoom-in-95 duration-300">
+                                <div
+                                    class="w-12 h-12 bg-emerald-100 rounded-full border-4 border-white shadow-md flex items-center justify-center mx-auto mb-2">
+                                    <svg class="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24"
+                                        stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                            d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <p class="text-sm font-black text-slate-800">Target Locked</p>
+                                <div id="coordsBadge"
+                                    class="mt-1 inline-flex items-center text-xs font-mono text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                                    0.000000, 0.000000
+                                </div>
+                                <p id="resolvedAddressText"
+                                    class="text-[11px] text-slate-500 font-medium mt-1 truncate px-4"></p>
+                                <button type="button" onclick="acquireGPSLocation()"
+                                    class="mt-2 block w-full text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors">
+                                    Recalibrate Coordinates
+                                </button>
+                            </div>
+
+                            <!-- Hidden form inputs for coordinates & address -->
+                            <input type="hidden" name="latitude" id="latitudeInput" value="" />
+                            <input type="hidden" name="longitude" id="longitudeInput" value="" />
+                            <input type="hidden" name="location_address" id="addressInput" value="" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-8 mt-4 border-t border-slate-100">
+                    <button type="submit" id="submitReportBtn"
+                        class="w-full py-4.5 px-6 rounded-2xl text-white font-black text-lg tracking-wide shadow-xl shadow-indigo-500/30 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 transition-all focus:ring-4 focus:ring-offset-2 focus:ring-indigo-500 flex items-center justify-center gap-2 hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-500/40">
+                        <span id="btnSubmitText" class="flex items-center gap-2">
+                            Deploy Issue Report
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                    d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                        </span>
+                        <span id="btnLoadingText" class="hidden flex items-center gap-2">
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4">
+                                </circle>
+                                <path className="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
+                            </svg>
+                            Transmitting...
+                        </span>
+                    </button>
+
+                    <a href="{% url 'citizen_dashboard' %}"
+                        class="block text-center w-full mt-4 py-3 px-6 rounded-2xl text-slate-500 font-bold text-sm tracking-wide hover:bg-slate-100 hover:text-slate-700 transition-colors no-underline">
+                        Cancel and return to Dashboard
+                    </a>
+                </div>
+            </div>
+        </form>
+    </main>
+</div>
+
+<script>
+    // Update hidden category when department changes
+    document.getElementById('departmentSelect')?.addEventListener('change', function () {
+        const selectedOption = this.options[this.selectedIndex];
+        const deptName = selectedOption.getAttribute('data-name');
+        if (deptName) {
+            document.getElementById('hiddenCategory').value = deptName;
+        }
+    });
+
+    // Image Preview Handler
+    function handleImagePreview(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const preview = document.getElementById('imagePreview');
+                const placeholder = document.getElementById('uploadPlaceholder');
+                const overlay = document.getElementById('replaceOverlay');
+                const dropZone = document.getElementById('dropZone');
+
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+                placeholder.classList.add('hidden');
+
+                dropZone.className = "border-2 border-dashed border-indigo-500 bg-indigo-50 shadow-inner rounded-[2rem] p-6 flex flex-col items-center justify-center cursor-pointer transition-all h-56 relative overflow-hidden group";
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // Geolocation Handler
+    function acquireGPSLocation() {
+        const btn = document.getElementById('gpsAcquireBtn');
+        const errorEl = document.getElementById('locationErrorMsg');
+
+        if (!navigator.geolocation) {
+            errorEl.innerText = "Geolocation is not supported by your browser.";
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        btn.innerText = "Pinpointing Satellites...";
+        btn.classList.add('animate-pulse', 'bg-indigo-50', 'border-indigo-200', 'text-indigo-700');
+        errorEl.classList.add('hidden');
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                document.getElementById('latitudeInput').value = lat;
+                document.getElementById('longitudeInput').value = lng;
+                document.getElementById('coordsBadge').innerText = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+                // Reverse geocode to get human-readable address
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.display_name) {
+                            document.getElementById('addressInput').value = data.display_name;
+                            const addrEl = document.getElementById('resolvedAddressText');
+                            if (addrEl) {
+                                addrEl.innerText = data.display_name;
+                            }
+                        }
+                    })
+                    .catch(() => { });
+
+                document.getElementById('unlockedLocationState').classList.add('hidden');
+                document.getElementById('lockedLocationState').classList.remove('hidden');
+            },
+            (err) => {
+                btn.innerText = "Acquire GPS Coordinates";
+                btn.classList.remove('animate-pulse', 'bg-indigo-50', 'border-indigo-200', 'text-indigo-700');
+                errorEl.innerText = "Unable to retrieve your location: " + err.message;
+                errorEl.classList.remove('hidden');
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+
+    // Form submit loading state & validation
+    document.getElementById('reportIssueForm')?.addEventListener('submit', function (e) {
+        const fileInput = document.getElementById('fileInput');
+        const lat = document.getElementById('latitudeInput').value;
+        const lng = document.getElementById('longitudeInput').value;
+
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert("Please attach an image of the issue.");
+            e.preventDefault();
+            return;
+        }
+
+        if (!lat || !lng) {
+            alert("Please capture the issue location coordinates.");
+            e.preventDefault();
+            return;
+        }
+
+        // Show loading state
+        const submitBtn = document.getElementById('submitReportBtn');
+        const submitText = document.getElementById('btnSubmitText');
+        const loadingText = document.getElementById('btnLoadingText');
+
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-70', 'cursor-wait');
+        submitText.classList.add('hidden');
+        loadingText.classList.remove('hidden');
+    });
+</script>
+{% endblock %}

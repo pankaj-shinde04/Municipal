@@ -1,0 +1,924 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ department.name|default:"Department HQ" }} - Command Center - CivicConnect{% endblock %}
+
+{% block content %}
+<!-- Include Leaflet for Geospatial Heatmap -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<div class="min-h-screen bg-gray-50 font-sans pb-16">
+  <!-- Top Navigation Bar for Department Admin -->
+  <nav class="bg-white border-b border-gray-200 sticky top-0 z-40 px-6 py-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-700 flex items-center justify-center text-white font-black text-lg shadow-md shadow-indigo-600/20">
+        {{ department.name|slice:":2"|upper|default:"HQ" }}
+      </div>
+      <div>
+        <h1 class="text-lg font-black text-gray-900 tracking-tight leading-tight">{{ department.name|default:"Department HQ" }}</h1>
+        <p class="text-xs font-semibold text-gray-500">Department Administration Command</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <!-- Universal Notification Bell -->
+      {% include 'includes/notification_bell.html' %}
+
+      <a href="{% url 'home' %}" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition no-underline flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Home
+      </a>
+      <div class="text-right hidden sm:block">
+        <p class="text-sm font-bold text-gray-800">{{ request.user.get_full_name|default:request.user.username }}</p>
+        <span class="inline-block px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+          Dept Admin
+        </span>
+      </div>
+      <a href="{% url 'logout' %}" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition border border-rose-100 no-underline">
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <div class="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+    <!-- Premium Hero Header -->
+    <header class="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900 rounded-3xl p-8 md:p-12 shadow-2xl border border-indigo-700/50">
+      <div class="absolute top-0 right-0 w-96 h-96 bg-indigo-500/30 rounded-full blur-[80px] -z-0 translate-x-1/2 -translate-y-1/2"></div>
+      <div class="absolute bottom-0 left-0 w-72 h-72 bg-violet-500/30 rounded-full blur-[80px] -z-0 -translate-x-1/2 translate-y-1/2"></div>
+      
+      <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-indigo-100 text-xs font-bold tracking-wider uppercase mb-5 backdrop-blur-md shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Live System Admin
+          </div>
+          <h1 class="text-4xl md:text-5xl font-black text-white tracking-tight leading-none mb-3">Command Center</h1>
+          <p class="text-lg text-indigo-100/90 max-w-xl font-medium">
+            Oversee active complaints, deploy operatives, and monitor geospatial city infrastructure for <strong class="text-white">{{ department.name|default:"your department" }}</strong>.
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Floating Navigation Tabs -->
+    <div class="flex flex-wrap gap-2 md:gap-4 bg-white/60 backdrop-blur-md p-2 rounded-2xl border border-gray-200/60 shadow-sm w-full md:w-fit overflow-x-auto">
+      <button
+        id="tab-btn-workers"
+        onclick="switchDeptTab('workers')"
+        class="px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transform -translate-y-0.5"
+      >
+        Worker Roster ({{ workers|length }})
+      </button>
+      <button
+        id="tab-btn-issues"
+        onclick="switchDeptTab('issues')"
+        class="px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/80"
+      >
+        Issue Tracking ({{ issues|length }})
+      </button>
+      <button
+        id="tab-btn-map"
+        onclick="switchDeptTab('map')"
+        class="px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/80"
+      >
+        Geospatial Analytics
+      </button>
+      <button
+        id="tab-btn-analytics"
+        onclick="switchDeptTab('analytics')"
+        class="px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/80"
+      >
+        Worker Analytics
+      </button>
+    </div>
+
+    <!-- Messages Display -->
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="p-4 rounded-2xl text-sm font-bold border shadow-sm {% if 'error' in msg.tags %}bg-rose-50 text-rose-700 border-rose-200{% else %}bg-emerald-50 text-emerald-700 border-emerald-200{% endif %}">
+          {{ msg }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- ============================================================= -->
+    <!-- TAB 1: WORKER ROSTER & DEPLOY OPERATIVE                       -->
+    <!-- ============================================================= -->
+    <div id="dept-tab-workers" class="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-300">
+      <!-- Worker List -->
+      <div class="lg:col-span-2 bg-white rounded-3xl shadow-xl shadow-gray-200/40 border border-gray-100 p-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center justify-between">
+          Active Field Operatives
+          <span class="text-sm font-bold bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">
+            {{ workers|length }} Total
+          </span>
+        </h2>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {% for worker in workers %}
+          <div class="border border-gray-100 rounded-2xl p-5 hover:border-indigo-200 hover:shadow-md transition-all bg-gray-50 group flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start mb-1">
+                <h3 class="font-bold text-gray-900 text-lg group-hover:text-indigo-600 transition-colors">
+                  {{ worker.get_full_name|default:worker.username }}
+                </h3>
+                <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider {% if worker.profile.is_available %}bg-emerald-100 text-emerald-800 border border-emerald-200{% else %}bg-amber-100 text-amber-800 border border-amber-200{% endif %}">
+                  {% if worker.profile.is_available %}Available{% else %}Engaged{% endif %}
+                </span>
+              </div>
+              <p class="text-sm text-gray-500 mb-3">{{ worker.email }}</p>
+              
+              <div class="bg-white p-3 rounded-lg border border-gray-100 text-xs space-y-1.5 mb-4">
+                <div class="flex justify-between">
+                  <span class="text-gray-400 font-semibold uppercase tracking-wider">Sector Lat/Lng</span>
+                  <span class="font-mono text-gray-900 font-bold">
+                    {{ worker.profile.base_latitude|default:"N/A" }}, {{ worker.profile.base_longitude|default:"N/A" }}
+                  </span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-400 font-semibold uppercase tracking-wider">Operational Radius</span>
+                  <span class="font-bold text-indigo-600">{{ worker.profile.service_radius_km|default:"5.0" }} km</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-400 font-semibold uppercase tracking-wider">Department</span>
+                  <span class="font-bold text-emerald-600">{{ worker.profile.department.name }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Worker Card Action Buttons -->
+            <div class="flex items-center gap-2 pt-3 border-t border-gray-200/60 mt-auto">
+              <button 
+                type="button"
+                onclick="openEditWorkerModal('{{ worker.id }}', '{{ worker.get_full_name|default:worker.username|escapejs }}', '{{ worker.email|escapejs }}', '{{ worker.profile.base_latitude|default:'' }}', '{{ worker.profile.base_longitude|default:'' }}', '{{ worker.profile.service_radius_km|default:'5.0' }}', '{{ worker.profile.is_available|yesno:'true,false' }}')"
+                class="flex-1 py-2 px-3 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition border border-indigo-200 text-center flex items-center justify-center gap-1"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Edit
+              </button>
+              <button 
+                type="button"
+                onclick="openDeleteWorkerModal('{{ worker.id }}', '{{ worker.get_full_name|default:worker.username|escapejs }}')"
+                class="py-2 px-3 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl transition border border-rose-200 text-center flex items-center justify-center gap-1"
+                title="Terminate Operative"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                Delete
+              </button>
+            </div>
+          </div>
+          {% empty %}
+          <div class="col-span-full text-center py-12 text-gray-400 font-medium">
+            No workers registered in this department yet. Deploy your first worker using the form on the right.
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Register Form -->
+      <div class="bg-indigo-600 rounded-3xl shadow-xl shadow-indigo-600/20 p-8 text-white h-fit">
+        <h2 class="text-2xl font-bold mb-2">Deploy Operative</h2>
+        <p class="text-indigo-200 text-sm mb-6">
+          Register a new worker and automatically assign them to <strong class="text-white">{{ department.name }}</strong> with jurisdiction coordinates.
+        </p>
+        
+        <form method="POST" action="{% url 'dept_admin_dashboard' %}" class="space-y-4">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="register_worker" />
+
+          <div>
+            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1">Full Name</label>
+            <input required type="text" name="name" class="w-full bg-indigo-700/50 border border-indigo-500 rounded-xl px-4 py-3 text-white placeholder-indigo-300 focus:ring-2 focus:ring-white focus:outline-none transition-all text-sm font-medium" placeholder="Jane Doe" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1">Email</label>
+            <input required type="email" name="email" class="w-full bg-indigo-700/50 border border-indigo-500 rounded-xl px-4 py-3 text-white placeholder-indigo-300 focus:ring-2 focus:ring-white focus:outline-none transition-all text-sm font-medium" placeholder="worker@city.gov" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1">Password</label>
+            <input required type="password" minlength="6" name="password" class="w-full bg-indigo-700/50 border border-indigo-500 rounded-xl px-4 py-3 text-white placeholder-indigo-300 focus:ring-2 focus:ring-white focus:outline-none transition-all text-sm font-medium" placeholder="••••••••" />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1">Base Latitude</label>
+              <input required type="number" step="any" id="workerBaseLat" name="lat" class="w-full bg-indigo-700/50 border border-indigo-500 rounded-xl px-4 py-3 text-white placeholder-indigo-300 focus:ring-2 focus:ring-white focus:outline-none transition-all text-sm font-medium" placeholder="18.2459" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1">Base Longitude</label>
+              <input required type="number" step="any" id="workerBaseLng" name="lng" class="w-full bg-indigo-700/50 border border-indigo-500 rounded-xl px-4 py-3 text-white placeholder-indigo-300 focus:ring-2 focus:ring-white focus:outline-none transition-all text-sm font-medium" placeholder="75.6744" />
+            </div>
+          </div>
+          <div>
+            <button type="button" onclick="autoDetectWorkerCoords()" id="btnDetectWorkerCoords" class="w-full py-2.5 px-3 bg-indigo-500/50 hover:bg-indigo-500 text-xs font-bold rounded-xl border border-indigo-400 text-white transition flex items-center justify-center gap-1.5">
+              <span>📍 Detect Current GPS Coordinates</span>
+            </button>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-indigo-200 uppercase tracking-wider mb-1">Radius (km)</label>
+            <input required type="number" step="any" name="radius" class="w-full bg-indigo-700/50 border border-indigo-500 rounded-xl px-4 py-3 text-white placeholder-indigo-300 focus:ring-2 focus:ring-white focus:outline-none transition-all text-sm font-medium" placeholder="5" value="5" />
+          </div>
+
+          <button 
+            type="submit"
+            class="w-full py-4 mt-2 bg-white text-indigo-600 font-bold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all text-sm uppercase tracking-wider"
+          >
+            Provision Setup
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- TAB 2: ISSUE TRACKING                                         -->
+    <!-- ============================================================= -->
+    <div id="dept-tab-issues" class="hidden space-y-6 animate-in fade-in duration-300">
+      <div class="bg-white rounded-3xl shadow-xl shadow-gray-200/40 border border-gray-100 overflow-hidden">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-bold">
+              <th class="p-4 pl-6">Complaint</th>
+              <th class="p-4">Citizen</th>
+              <th class="p-4">Assigned Worker</th>
+              <th class="p-4">Priority</th>
+              <th class="p-4">Status</th>
+              <th class="p-4 text-center">Images</th>
+              <th class="p-4 pr-6 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for issue in issues %}
+            <tr class="hover:bg-indigo-50/30 transition-colors {% if issue.status == 'Resolved' %}bg-amber-50/20{% endif %}">
+              <td class="p-4 pl-6">
+                <div class="font-bold text-gray-900 text-sm line-clamp-1 max-w-[220px]" title="{{ issue.description }}">
+                  {{ issue.description }}
+                </div>
+                <div class="text-xs text-gray-400 font-mono mt-1 flex items-center gap-2">
+                  <span class="font-bold text-indigo-700">{{ issue.complaint_id }}</span>
+                  <span>&bull;</span>
+                  <span>{{ issue.created_at|date:"M d, Y" }}</span>
+                </div>
+              </td>
+              <td class="p-4 text-sm text-gray-600">
+                {{ issue.citizen_name }}
+              </td>
+              <td class="p-4 text-sm">
+                {% if issue.assigned_worker %}
+                  <span class="font-bold text-indigo-700 flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    {{ issue.worker_name }}
+                  </span>
+                {% else %}
+                  <span class="text-gray-400 italic">Unassigned</span>
+                {% endif %}
+              </td>
+              <td class="p-4">
+                <span class="text-xs font-bold px-2.5 py-1 rounded-md border 
+                  {% if issue.priority == 'High' %}bg-rose-50 text-rose-700 border-rose-200
+                  {% elif issue.priority == 'Low' %}bg-slate-50 text-slate-700 border-slate-200
+                  {% else %}bg-amber-50 text-amber-700 border-amber-200{% endif %}">
+                  {{ issue.priority|default:"Medium" }} Priority
+                </span>
+              </td>
+              <td class="p-4">
+                {% if issue.status == 'Resolved' %}
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-black bg-amber-100 text-amber-800 border border-amber-300 shadow-sm animate-pulse">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> Awaiting Verification
+                  </span>
+                {% elif issue.status == 'Closed' %}
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    ✓ Closed
+                  </span>
+                {% elif issue.status == 'In Progress' %}
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-100 text-blue-800">
+                    In Progress
+                  </span>
+                {% elif issue.status == 'Assigned' %}
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold bg-indigo-100 text-indigo-800">
+                    Assigned
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold bg-gray-100 text-gray-800">
+                    {{ issue.status }}
+                  </span>
+                {% endif %}
+              </td>
+              <td class="p-4 text-center">
+                {% if issue.image %}
+                  <a href="{{ issue.image_url }}" target="_blank" class="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg border border-indigo-100 no-underline transition-colors inline-block">
+                    Evidence
+                  </a>
+                {% else %}
+                  <span class="text-xs text-gray-400 italic">None</span>
+                {% endif %}
+              </td>
+              <td class="p-4 pr-6 text-right">
+                <button 
+                  type="button"
+                  onclick="openManageIssueModal('{{ issue.id }}', '{{ issue.complaint_id }}', '{{ issue.description|escapejs }}', '{{ issue.status }}', '{{ issue.priority }}', '{{ issue.citizen_name|escapejs }}', '{{ issue.assigned_worker.id|default:'' }}', '{{ issue.worker_name|escapejs }}', '{{ issue.image_url }}', '{{ issue.completion_image_url }}', '{{ issue.latitude|default:'' }}', '{{ issue.longitude|default:'' }}', '{{ issue.location_address|default:''|escapejs }}', '{{ issue.admin_notes|default:''|escapejs }}', '{{ issue.rejection_reason|default:''|escapejs }}')"
+                  class="text-xs font-bold px-3.5 py-2 rounded-xl transition-all border shadow-sm {% if issue.status == 'Resolved' %}bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-transparent shadow-amber-500/20{% else %}bg-white hover:bg-indigo-50 text-indigo-700 border-indigo-200 hover:border-indigo-300{% endif %}"
+                >
+                  {% if issue.status == 'Resolved' %}🔍 Verify Proof{% else %}Manage{% endif %}
+                </button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="p-8 text-center text-gray-400 text-sm">
+                No complaints registered in this department yet.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- TAB 3: GEOSPATIAL MAP                                         -->
+    <!-- ============================================================= -->
+    <div id="dept-tab-map" class="hidden bg-white rounded-3xl shadow-xl shadow-gray-200/40 border border-gray-100 p-8 animate-in fade-in duration-300">
+      <div class="mb-6">
+        <h3 class="text-2xl font-bold text-gray-900 mb-2">Department Territory & Hotspots</h3>
+        <p class="text-gray-500 text-sm">
+          Visualizing active complaints and deployed operatives across <strong class="text-gray-900">{{ department.name }}</strong> territory.
+        </p>
+      </div>
+      <div id="dept-map" class="h-96 w-full rounded-2xl overflow-hidden ring-4 ring-gray-100"></div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- TAB 4: WORKER ANALYTICS & EFFICIENCY TRACKER                  -->
+    <!-- ============================================================= -->
+    <div id="dept-tab-analytics" class="hidden bg-white rounded-3xl shadow-xl shadow-gray-200/40 border border-gray-100 p-8 animate-in fade-in duration-300 min-h-[400px]">
+      <div class="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h3 class="text-2xl font-bold text-gray-900 mb-1">Operative Efficiency Tracker</h3>
+          <p class="text-gray-500 text-sm">Real-time performance metrics, workload distribution, and resolution success rates across your team.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+            {{ workers|length }} Total Operatives
+          </span>
+        </div>
+      </div>
+      
+      <div class="overflow-x-auto border border-gray-100 rounded-2xl">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-bold">
+              <th class="p-4 pl-6">Operative</th>
+              <th class="p-4 text-center">Assigned Tasks</th>
+              <th class="p-4 text-center">Active Queue</th>
+              <th class="p-4 text-center">Resolved</th>
+              <th class="p-4">Resolution Rate</th>
+              <th class="p-4 text-center">Service Radius</th>
+              <th class="p-4 text-center">Status</th>
+              <th class="p-4 pr-6 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 bg-white">
+            {% for item in worker_analytics %}
+            <tr class="hover:bg-indigo-50/20 transition-colors">
+              <td class="p-4 pl-6">
+                <div class="font-bold text-gray-900 text-sm">
+                  {{ item.worker.get_full_name|default:item.worker.username }}
+                </div>
+                <div class="text-xs text-gray-400 font-mono">{{ item.worker.email }}</div>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-2.5 py-1 rounded-md text-xs font-black bg-slate-100 text-slate-800">
+                  {{ item.total_tasks }}
+                </span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-2.5 py-1 rounded-md text-xs font-black {% if item.active_tasks > 0 %}bg-indigo-100 text-indigo-700{% else %}bg-slate-50 text-slate-400{% endif %}">
+                  {{ item.active_tasks }}
+                </span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-2.5 py-1 rounded-md text-xs font-black {% if item.resolved_tasks > 0 %}bg-emerald-100 text-emerald-700{% else %}bg-slate-50 text-slate-400{% endif %}">
+                  {{ item.resolved_tasks }}
+                </span>
+              </td>
+              <td class="p-4 min-w-[160px]">
+                <div class="flex items-center justify-between text-xs font-bold mb-1">
+                  <span class="{% if item.efficiency_rate >= 80 %}text-emerald-700{% elif item.efficiency_rate >= 50 %}text-indigo-700{% else %}text-amber-700{% endif %}">
+                    {{ item.efficiency_rate }}%
+                  </span>
+                </div>
+                <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-500 {% if item.efficiency_rate >= 80 %}bg-emerald-500{% elif item.efficiency_rate >= 50 %}bg-indigo-600{% else %}bg-amber-500{% endif %}" style="width: {{ item.efficiency_rate }}%;"></div>
+                </div>
+              </td>
+              <td class="p-4 text-center font-bold text-indigo-600 text-sm">
+                {{ item.worker.profile.service_radius_km|default:"5.0" }} km
+              </td>
+              <td class="p-4 text-center">
+                <span class="inline-block px-3 py-1 rounded-full text-xs font-bold {% if item.worker.profile.is_available %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-amber-50 text-amber-700 border border-amber-200{% endif %}">
+                  {% if item.worker.profile.is_available %}Available{% else %}Engaged{% endif %}
+                </span>
+              </td>
+              <td class="p-4 pr-6 text-right">
+                <div class="inline-flex items-center gap-1.5">
+                  <button 
+                    type="button"
+                    onclick="openEditWorkerModal('{{ item.worker.id }}', '{{ item.worker.get_full_name|default:item.worker.username|escapejs }}', '{{ item.worker.email|escapejs }}', '{{ item.worker.profile.base_latitude|default:'' }}', '{{ item.worker.profile.base_longitude|default:'' }}', '{{ item.worker.profile.service_radius_km|default:'5.0' }}', '{{ item.worker.profile.is_available|yesno:'true,false' }}')"
+                    class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition border border-transparent hover:border-indigo-100"
+                    title="Edit Operative"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  </button>
+                  <button 
+                    type="button"
+                    onclick="openDeleteWorkerModal('{{ item.worker.id }}', '{{ item.worker.get_full_name|default:item.worker.username|escapejs }}')"
+                    class="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition border border-transparent hover:border-rose-100"
+                    title="Terminate Operative"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8" class="p-8 text-center text-gray-400 text-sm">No operatives registered yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- MODAL: ISSUE MANAGEMENT & VERIFICATION DOSSIER                -->
+<!-- ============================================================= -->
+<div id="manageIssueModal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl my-8 overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-100 flex flex-col max-h-[90vh]">
+    
+    <!-- Modal Header -->
+    <div class="p-6 px-8 border-b border-gray-100 bg-slate-50 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span id="manageComplaintId" class="text-sm font-black text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full uppercase tracking-wider">C100</span>
+        <span id="manageStatusBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-slate-200 text-slate-800">Status</span>
+        <span id="managePriorityBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800">Priority</span>
+      </div>
+      <button type="button" onclick="closeManageIssueModal()" class="text-gray-400 hover:text-gray-700 p-2 rounded-full hover:bg-gray-200 transition">
+        ✕
+      </button>
+    </div>
+
+    <div class="p-6 px-8 overflow-y-auto space-y-6 flex-1">
+      <!-- Complaint Description & Citizen Info -->
+      <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+        <div class="flex justify-between items-start gap-4 mb-2">
+          <p id="manageDescription" class="font-bold text-gray-900 text-lg leading-snug"></p>
+        </div>
+        <div class="text-xs text-gray-500 font-medium flex items-center gap-4 flex-wrap pt-2 border-t border-slate-200/60">
+          <span>Reported by: <strong id="manageCitizen" class="text-gray-800"></strong></span>
+          <span>Assigned to: <strong id="manageWorker" class="text-indigo-700"></strong></span>
+          <span id="manageAddress" class="text-rose-600"></span>
+        </div>
+      </div>
+
+      <!-- Before vs After Verification Grid -->
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-2">
+          <span>Photographic Verification & Proof Comparison</span>
+        </h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Initial Evidence -->
+          <div class="space-y-2">
+            <span class="text-xs font-bold text-slate-600 flex items-center gap-1.5">
+              📸 Initial Citizen Evidence
+            </span>
+            <div class="h-48 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 relative group flex items-center justify-center">
+              <img id="manageOrigImg" src="" alt="Initial Evidence" class="w-full h-full object-cover hidden" />
+              <span id="manageNoOrigText" class="text-xs font-bold text-slate-400">No Image Submitted</span>
+            </div>
+          </div>
+          <!-- Worker Fix Proof -->
+          <div class="space-y-2">
+            <span class="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+              ✅ Worker Operational Fix Proof
+            </span>
+            <div id="manageProofImgWrap" class="h-48 rounded-2xl overflow-hidden bg-emerald-50 border-2 border-emerald-200 relative group flex items-center justify-center">
+              <img id="manageProofImg" src="" alt="Fix Proof" class="w-full h-full object-cover hidden" />
+              <div id="manageNoProofText" class="text-center p-4 text-xs font-bold text-slate-400">
+                <span>Awaiting Worker Resolution Proof</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Previous Rejection Notice (if any) -->
+      <div id="manageRejectionNotice" class="hidden bg-rose-50 border border-rose-200 p-4 rounded-2xl">
+        <div class="text-xs font-bold uppercase tracking-wider text-rose-800 mb-1 flex items-center gap-1">
+          ⚠️ Previous Rejection Reason
+        </div>
+        <p id="manageRejectionReasonText" class="text-sm font-medium text-rose-900"></p>
+      </div>
+
+      <!-- Verification Section: If Status is 'Resolved' -->
+      <div id="verificationActionsSection" class="hidden space-y-4 pt-4 border-t border-gray-100">
+        <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-4 rounded-2xl">
+          <h4 class="font-bold text-amber-900 text-sm mb-1 flex items-center gap-1.5">
+            <span>⚡ Verification Required</span>
+          </h4>
+          <p class="text-xs text-amber-800">
+            Review the operational proof uploaded by the operative above. You can either approve the fix to officially close this complaint, or reject it with instructions for further repair.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- 1. Approve & Close Form -->
+          <form method="POST" action="{% url 'dept_admin_dashboard' %}" class="bg-emerald-50/60 border border-emerald-200 p-5 rounded-2xl flex flex-col justify-between">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="verify_approve_issue" />
+            <input type="hidden" name="issue_id" id="verifyIssueId" value="" />
+            <div>
+              <h5 class="font-bold text-emerald-950 text-sm mb-1">Approve Resolution</h5>
+              <p class="text-xs text-emerald-700 mb-3">Accepts proof, closes complaint officially, and notifies citizen.</p>
+              <label class="block text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1">Admin Audit Note (Optional)</label>
+              <input type="text" name="admin_notes" placeholder="e.g. Inspected and approved on site" class="w-full text-xs p-2.5 rounded-xl border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white mb-4" />
+            </div>
+            <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-md shadow-emerald-600/20">
+              ✓ Approve & Officially Close
+            </button>
+          </form>
+
+          <!-- 2. Reject Form -->
+          <form method="POST" action="{% url 'dept_admin_dashboard' %}" class="bg-rose-50/60 border border-rose-200 p-5 rounded-2xl flex flex-col justify-between">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="reject_issue" />
+            <input type="hidden" name="issue_id" id="rejectIssueId" value="" />
+            <div>
+              <h5 class="font-bold text-rose-950 text-sm mb-1">Reject Proof</h5>
+              <p class="text-xs text-rose-700 mb-3">Reverts issue to 'In Progress' and sends rejection reason to operative.</p>
+              <label class="block text-[11px] font-bold text-rose-800 uppercase tracking-wider mb-1">Mandatory Rejection Reason *</label>
+              <textarea required name="rejection_reason" rows="2" placeholder="e.g. Leakage still visible; needs proper pipe sealing" class="w-full text-xs p-2.5 rounded-xl border border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white mb-4"></textarea>
+            </div>
+            <button type="submit" class="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-md shadow-rose-600/20">
+              ✕ Reject & Send for Rework
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="p-4 px-8 border-t border-gray-100 bg-slate-50 flex justify-end">
+      <button type="button" onclick="closeManageIssueModal()" class="px-6 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xs uppercase tracking-wider rounded-xl transition">
+        Close Window
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- MODAL: EDIT FIELD OPERATIVE                                   -->
+<!-- ============================================================= -->
+<div id="editWorkerModal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg my-8 overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-100">
+    <div class="p-6 border-b border-gray-100 bg-indigo-600 text-white flex justify-between items-center">
+      <div>
+        <h3 class="text-xl font-bold">Edit Field Operative</h3>
+        <p class="text-xs text-indigo-200">Update worker profile, sector coordinates, and operational status.</p>
+      </div>
+      <button type="button" onclick="closeEditWorkerModal()" class="text-indigo-200 hover:text-white p-2">✕</button>
+    </div>
+
+    <form method="POST" action="{% url 'dept_admin_dashboard' %}" class="p-6 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit_worker" />
+      <input type="hidden" name="worker_id" id="editWorkerId" value="" />
+      <input type="hidden" name="redirect_tab" value="workers" />
+
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Full Name</label>
+        <input required type="text" name="name" id="editWorkerName" class="w-full bg-slate-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Email</label>
+        <input required type="email" name="email" id="editWorkerEmail" class="w-full bg-slate-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Reset Password (Leave blank to keep current)</label>
+        <input type="password" name="password" minlength="6" placeholder="••••••••" class="w-full bg-slate-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Base Latitude</label>
+          <input required type="number" step="any" name="lat" id="editWorkerLat" class="w-full bg-slate-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Base Longitude</label>
+          <input required type="number" step="any" name="lng" id="editWorkerLng" class="w-full bg-slate-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        </div>
+      </div>
+
+      <div>
+        <button type="button" onclick="autoDetectEditCoords()" id="btnDetectEditCoords" class="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 text-xs font-bold rounded-xl text-slate-700 transition flex items-center justify-center gap-1 border border-slate-200">
+          📍 Detect Current Coordinates
+        </button>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Operational Radius (km)</label>
+        <input required type="number" step="any" name="radius" id="editWorkerRadius" class="w-full bg-slate-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Availability Status</label>
+        <div class="flex items-center gap-4">
+          <label class="flex items-center gap-2 text-sm font-bold text-emerald-800 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200 cursor-pointer">
+            <input type="radio" name="is_available" id="editWorkerAvailTrue" value="true" class="text-emerald-600 focus:ring-emerald-500" />
+            Available for Tasks
+          </label>
+          <label class="flex items-center gap-2 text-sm font-bold text-amber-800 bg-amber-50 px-3 py-2 rounded-xl border border-amber-200 cursor-pointer">
+            <input type="radio" name="is_available" id="editWorkerAvailFalse" value="false" class="text-amber-600 focus:ring-amber-500" />
+            Engaged / On Leave
+          </label>
+        </div>
+      </div>
+
+      <div class="flex gap-3 pt-4 border-t border-gray-100">
+        <button type="button" onclick="closeEditWorkerModal()" class="w-1/3 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs uppercase tracking-wider rounded-xl transition">
+          Cancel
+        </button>
+        <button type="submit" class="w-2/3 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-md shadow-indigo-600/20">
+          Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- MODAL: CONFIRM OPERATIVE TERMINATION                          -->
+<!-- ============================================================= -->
+<div id="deleteWorkerModal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-100 p-6 space-y-4">
+    <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl font-black mx-auto">
+      ⚠️
+    </div>
+    <div class="text-center">
+      <h3 class="text-xl font-black text-gray-900 mb-1">Terminate Operative?</h3>
+      <p class="text-xs text-gray-500">
+        Are you sure you want to remove <strong id="deleteWorkerName" class="text-gray-900"></strong>? Any tasks currently assigned to this worker will be automatically safely returned to the open queue.
+      </p>
+    </div>
+
+    <form method="POST" action="{% url 'dept_admin_dashboard' %}" class="flex gap-3 pt-2">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete_worker" />
+      <input type="hidden" name="worker_id" id="deleteWorkerId" value="" />
+      <input type="hidden" name="redirect_tab" value="workers" />
+      
+      <button type="button" onclick="closeDeleteWorkerModal()" class="w-1/2 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs uppercase tracking-wider rounded-xl transition">
+        Cancel
+      </button>
+      <button type="submit" class="w-1/2 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-md shadow-rose-600/20">
+        Confirm Delete
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+  function switchDeptTab(tab) {
+    const tabs = ['workers', 'issues', 'map', 'analytics'];
+    const activeBtnClass = "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transform -translate-y-0.5";
+    const inactiveBtnClass = "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/80";
+
+    tabs.forEach(t => {
+      const panel = document.getElementById(`dept-tab-${t}`);
+      const btn = document.getElementById(`tab-btn-${t}`);
+      if (panel && btn) {
+        if (t === tab) {
+          panel.classList.remove('hidden');
+          btn.className = `px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap ${activeBtnClass}`;
+        } else {
+          panel.classList.add('hidden');
+          btn.className = `px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap ${inactiveBtnClass}`;
+        }
+      }
+    });
+
+    if (tab === 'map' && window.deptMap) {
+      setTimeout(() => window.deptMap.invalidateSize(), 200);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialTab = urlParams.get('tab') || '{{ current_tab|default:"workers" }}';
+    switchDeptTab(initialTab);
+
+    const mapElement = document.getElementById('dept-map');
+    if (mapElement) {
+      window.deptMap = L.map('dept-map').setView([18.2459, 75.6744], 13);
+      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps'
+      }).addTo(window.deptMap);
+
+      // Plot issues on dept map
+      {% for issue in issues %}
+        {% if issue.latitude and issue.longitude %}
+          L.circleMarker([{{ issue.latitude }}, {{ issue.longitude }}], {
+            radius: 8,
+            fillColor: '#6366f1',
+            color: '#ffffff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.85
+          }).addTo(window.deptMap).bindPopup(`
+            <div style="font-family: sans-serif; font-size: 13px;">
+              <strong style="color: #0f172a;">{{ issue.complaint_id }}</strong><br/>
+              <span style="color: #64748b;">{{ issue.description|truncatechars:40 }}</span><br/>
+              <b style="color: #6366f1;">{{ issue.status }}</b>
+            </div>
+          `);
+        {% endif %}
+      {% endfor %}
+
+      // Plot workers base location on dept map
+      {% for worker in workers %}
+        {% if worker.profile.base_latitude and worker.profile.base_longitude %}
+          L.circleMarker([{{ worker.profile.base_latitude }}, {{ worker.profile.base_longitude }}], {
+            radius: 9,
+            fillColor: '#10b981',
+            color: '#ffffff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.9
+          }).addTo(window.deptMap).bindPopup(`
+            <div style="font-family: sans-serif; font-size: 13px;">
+              <strong style="color: #0f172a;">Operative: {{ worker.get_full_name|default:worker.username }}</strong><br/>
+              <span style="color: #10b981; font-weight: bold;">Radius: {{ worker.profile.service_radius_km|default:"5.0" }} km</span>
+            </div>
+          `);
+        {% endif %}
+      {% endfor %}
+    }
+  });
+
+  function autoDetectWorkerCoords() {
+    const btn = document.getElementById('btnDetectWorkerCoords');
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+    btn.innerHTML = `<span>⌛ Detecting coordinates...</span>`;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        document.getElementById('workerBaseLat').value = pos.coords.latitude.toFixed(6);
+        document.getElementById('workerBaseLng').value = pos.coords.longitude.toFixed(6);
+        btn.innerHTML = `<span>✓ Coordinates Auto-Filled!</span>`;
+      },
+      (err) => {
+        btn.innerHTML = `<span>📍 Detect Current GPS Coordinates</span>`;
+        alert("Failed to get coordinates: " + err.message);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
+  function autoDetectEditCoords() {
+    const btn = document.getElementById('btnDetectEditCoords');
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+    btn.innerHTML = `<span>⌛ Detecting...</span>`;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        document.getElementById('editWorkerLat').value = pos.coords.latitude.toFixed(6);
+        document.getElementById('editWorkerLng').value = pos.coords.longitude.toFixed(6);
+        btn.innerHTML = `<span>✓ Detected!</span>`;
+      },
+      (err) => {
+        btn.innerHTML = `<span>📍 Detect Current Coordinates</span>`;
+        alert("Failed to get coordinates: " + err.message);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
+  // --- Issue Management Modal Logic ---
+  function openManageIssueModal(id, complaintId, desc, status, priority, citizenName, workerId, workerName, origImg, proofImg, lat, lng, address, adminNotes, rejectionReason) {
+    document.getElementById('manageComplaintId').innerText = complaintId;
+    document.getElementById('manageDescription').innerText = desc;
+    document.getElementById('manageCitizen').innerText = citizenName || 'Anonymous Citizen';
+    document.getElementById('manageWorker').innerText = workerName || 'Unassigned';
+    document.getElementById('manageAddress').innerText = address ? `📍 ${address}` : (lat && lng ? `📍 ${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}` : '');
+
+    // Badges
+    const statusEl = document.getElementById('manageStatusBadge');
+    statusEl.innerText = status;
+    if (status === 'Resolved') {
+      statusEl.className = "text-xs font-black px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300";
+    } else if (status === 'Closed') {
+      statusEl.className = "text-xs font-black px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300";
+    } else {
+      statusEl.className = "text-xs font-bold px-3 py-1 rounded-full bg-slate-200 text-slate-800";
+    }
+
+    const priorityEl = document.getElementById('managePriorityBadge');
+    priorityEl.innerText = `${priority || 'Medium'} Priority`;
+
+    // Images
+    const origImgEl = document.getElementById('manageOrigImg');
+    const noOrigEl = document.getElementById('manageNoOrigText');
+    if (origImg) {
+      origImgEl.src = origImg;
+      origImgEl.classList.remove('hidden');
+      noOrigEl.classList.add('hidden');
+    } else {
+      origImgEl.classList.add('hidden');
+      noOrigEl.classList.remove('hidden');
+    }
+
+    const proofImgEl = document.getElementById('manageProofImg');
+    const noProofEl = document.getElementById('manageNoProofText');
+    if (proofImg) {
+      proofImgEl.src = proofImg;
+      proofImgEl.classList.remove('hidden');
+      noProofEl.classList.add('hidden');
+    } else {
+      proofImgEl.classList.add('hidden');
+      noProofEl.classList.remove('hidden');
+    }
+
+    // Previous rejection reason
+    const rejBox = document.getElementById('manageRejectionNotice');
+    const rejText = document.getElementById('manageRejectionReasonText');
+    if (rejectionReason) {
+      rejText.innerText = rejectionReason;
+      rejBox.classList.remove('hidden');
+    } else {
+      rejBox.classList.add('hidden');
+    }
+
+    // Set IDs for verification forms
+    document.getElementById('verifyIssueId').value = id;
+    document.getElementById('rejectIssueId').value = id;
+
+    // Show verification options if status is Resolved
+    const verifSection = document.getElementById('verificationActionsSection');
+    if (status === 'Resolved') {
+      verifSection.classList.remove('hidden');
+    } else {
+      verifSection.classList.add('hidden');
+    }
+
+    document.getElementById('manageIssueModal').classList.remove('hidden');
+  }
+
+  function closeManageIssueModal() {
+    document.getElementById('manageIssueModal').classList.add('hidden');
+  }
+
+  // --- Edit Worker Modal Logic ---
+  function openEditWorkerModal(id, name, email, lat, lng, radius, isAvailable) {
+    document.getElementById('editWorkerId').value = id;
+    document.getElementById('editWorkerName').value = name;
+    document.getElementById('editWorkerEmail').value = email;
+    document.getElementById('editWorkerLat').value = lat;
+    document.getElementById('editWorkerLng').value = lng;
+    document.getElementById('editWorkerRadius').value = radius || '5.0';
+
+    if (isAvailable === 'true' || isAvailable === true) {
+      document.getElementById('editWorkerAvailTrue').checked = true;
+    } else {
+      document.getElementById('editWorkerAvailFalse').checked = true;
+    }
+
+    document.getElementById('editWorkerModal').classList.remove('hidden');
+  }
+
+  function closeEditWorkerModal() {
+    document.getElementById('editWorkerModal').classList.add('hidden');
+  }
+
+  // --- Delete Worker Modal Logic ---
+  function openDeleteWorkerModal(id, name) {
+    document.getElementById('deleteWorkerId').value = id;
+    document.getElementById('deleteWorkerName').innerText = name;
+    document.getElementById('deleteWorkerModal').classList.remove('hidden');
+  }
+
+  function closeDeleteWorkerModal() {
+    document.getElementById('deleteWorkerModal').classList.add('hidden');
+  }
+</script>
+{% endblock %}
+

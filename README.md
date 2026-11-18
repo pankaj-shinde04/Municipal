@@ -52,7 +52,7 @@ The central workflow of the platform:
 
 ---
 
-### Module 3 — Complaint & Department Management
+<!-- ### Module 3 — Complaint & Department Management
 **Simple meaning:** Super Admin creates departments and assigns Department Admins. Complaints are automatically routed to the selected department's dashboard.
 - **Workflow:**
   - Super Admin creates departments and assigns Department Admins.
@@ -67,21 +67,24 @@ The central workflow of the platform:
   - Monitor pending and overdue complaints.
   - Maintain complaint status and assignment history audit log.
 
----
+--- -->
 
-### Module 4 — Automated Worker Assignment
-**Simple meaning:** Instead of manual dispatch, the system automatically finds and assigns the best-suited worker based on proximity and workload.
+### Module 4 — Department-Scoped Nearest Worker Assignment
+**Simple meaning:** When a citizen reports an issue, the system automatically assigns the closest worker belonging strictly to that issue's department using live GPS coordinates.
 - **Workflow:**
-  - When a complaint arrives, system checks eligible workers in that department.
-  - System calculates distance (using Haversine formula) and checks worker availability & task queue.
-  - Nearest available worker with lowest workload is automatically assigned and notified.
+  - Citizen submits a complaint with live GPS location and selects the relevant department (e.g., Water Department).
+  - The system isolates workers belonging exclusively to that department (workers from other departments are ignored).
+  - Geographic distance is calculated between the complaint's coordinates and each departmental worker using the Haversine formula.
+  - The nearest departmental worker is automatically assigned to the issue, and the status changes from `Submitted` to `Assigned`.
+  - The assigned worker receives an instant notification with complaint details.
+  - If no workers exist in that department, the complaint remains in `Submitted` status for manual department admin dispatch.
 - **Features to build:**
-  - Eligible worker identification by department.
-  - Distance calculation using Haversine formula based on coordinates.
-  - Workload balance & availability checker.
-  - Automated assignment engine.
-  - Fallback handling when no workers are available.
-  - Reassignment tracking and audit history.
+  - Department filter gate (strictly isolates workers of the selected department).
+  - Haversine distance calculation utility based on GPS coordinates (lat/lng).
+  - Nearest departmental worker selection algorithm.
+  - Automated assignment engine on complaint submission.
+  - Notification dispatch to the assigned worker.
+  - Fallback handling when no departmental worker is registered.
 
 ---
 

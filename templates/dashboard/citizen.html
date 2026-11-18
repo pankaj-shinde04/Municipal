@@ -1,0 +1,420 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Citizen Dashboard - Civic Command - CivicConnect{% endblock %}
+
+{% block content %}
+<!-- Include Leaflet for Marker Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<div class="min-h-screen bg-gray-50 flex flex-col font-sans relative pb-16">
+  <!-- Top Navigation Bar for Citizen -->
+  <nav class="bg-white border-b border-gray-200 sticky top-0 z-40 px-6 py-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-700 flex items-center justify-center text-white font-black text-lg shadow-md shadow-indigo-600/20">
+        C
+      </div>
+      <div>
+        <h1 class="text-lg font-black text-gray-900 tracking-tight leading-tight">CivicConnect</h1>
+        <p class="text-xs font-semibold text-gray-500">Citizen Command Center</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <!-- Universal Notification Bell -->
+      {% include 'includes/notification_bell.html' %}
+
+      <a href="{% url 'home' %}" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition no-underline flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Home
+      </a>
+
+      <div class="text-right hidden sm:block">
+        <p class="text-sm font-bold text-gray-800">{{ request.user.get_full_name|default:request.user.username }}</p>
+        <span class="inline-block px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+          Citizen
+        </span>
+      </div>
+      <a href="{% url 'logout' %}" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition border border-rose-100 no-underline">
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <main class="flex-1 max-w-7xl mx-auto w-full p-6 md:p-8 relative z-10">
+    <!-- Welcome & Report CTA -->
+    <section class="mb-12 bg-gradient-to-br from-indigo-900 via-slate-800 to-violet-950 rounded-[2rem] p-8 md:p-12 shadow-2xl border border-indigo-700/50 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden group">
+      <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[100px] -z-10 translate-x-1/3 -translate-y-1/3 transition-transform duration-700 group-hover:scale-110"></div>
+      <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-violet-500/20 rounded-full blur-[80px] -z-10 -translate-x-1/3 translate-y-1/3 transition-transform duration-700 group-hover:scale-110"></div>
+      
+      <div class="z-10 text-white">
+        <div class="inline-flex items-center gap-2 px-3 py-1 pb-1.5 rounded-full bg-white/10 border border-white/20 text-indigo-100 text-xs font-bold tracking-widest uppercase mb-4">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Citizen Hub
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight mb-4 drop-shadow-md">Civic Command</h1>
+        <p class="text-lg text-indigo-100 max-w-xl font-medium leading-relaxed drop-shadow-sm">
+          Track the progress of your past reports, view verified resolution photos, or report a new problem in your neighborhood instantly to dispatch a local operative.
+        </p>
+      </div>
+      
+      <div class="shrink-0 z-10 w-full md:w-auto">
+        <a href="{% url 'report_issue' %}" class="block w-full text-center bg-white text-indigo-900 hover:bg-slate-50 font-black py-4 px-8 rounded-2xl shadow-xl shadow-black/10 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-white/20 no-underline">
+          <span class="flex items-center justify-center gap-2">
+            <svg class="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+            </svg>
+            Deploy Issue Report
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Messages Alert -->
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="p-4 rounded-2xl text-sm font-bold border shadow-sm mb-8 {% if 'error' in msg.tags %}bg-rose-50 text-rose-700 border-rose-200{% else %}bg-emerald-50 text-emerald-700 border-emerald-200{% endif %}">
+          {{ msg }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Issue Tracking Section -->
+    <section class="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-10 shadow-xl border border-white/50 relative">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-4">
+        <div>
+          <h2 class="text-3xl font-black text-slate-900 tracking-tight">Your Active Reports</h2>
+          <p class="text-slate-500 font-medium mt-1">Monitor the lifecycle of your civic submissions</p>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-sm font-bold bg-indigo-50 border border-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full shadow-sm">
+            {{ issues|length }} Dispatches
+          </span>
+        </div>
+      </div>
+
+      {% if not issues %}
+        <div class="bg-slate-50 rounded-[2rem] p-16 text-center border-2 border-dashed border-slate-200">
+          <div class="w-24 h-24 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-6 border border-slate-100">
+            <svg class="w-12 h-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h3 class="text-2xl font-black text-slate-800 mb-3 tracking-wide">No Active Dispatches</h3>
+          <p class="text-slate-500 mb-8 max-w-md mx-auto text-lg leading-relaxed">
+            You haven't reported any civic issues yet. Help keep the municipal infrastructure operational by reporting problems you encounter.
+          </p>
+          <a href="{% url 'report_issue' %}" class="inline-flex items-center gap-2 text-white bg-slate-900 hover:bg-indigo-600 px-6 py-3 rounded-xl font-bold shadow-lg transition-colors no-underline">
+            Draft First Report
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </a>
+        </div>
+      {% else %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {% for issue in issues %}
+          <div 
+            onclick="openCitizenIssueModal('{{ issue.id }}', '{{ issue.complaint_id }}', '{{ issue.description|escapejs }}', '{{ issue.status }}', '{{ issue.department.name|escapejs }}', '{{ issue.category|escapejs }}', '{{ issue.created_at|date:'M d, Y' }}', '{{ issue.created_at|date:'h:i A' }}', '{{ issue.updated_at|date:'M d, Y' }}', '{{ issue.image_url }}', '{{ issue.completion_image_url }}', '{{ issue.latitude|default:'' }}', '{{ issue.longitude|default:'' }}')"
+            class="bg-white rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-2 group relative overflow-hidden
+              {% if issue.status == 'Closed' %}border border-slate-100 opacity-80 hover:border-emerald-300 hover:opacity-100 hover:shadow-[0_20px_40px_-15px_rgba(5,150,105,0.1)]
+              {% else %}border border-slate-200 shadow-sm hover:border-indigo-400 hover:shadow-[0_20px_40px_-15px_rgba(79,70,229,0.2)]
+              {% endif %}"
+          >
+            <!-- Top Accent Line -->
+            <div class="absolute top-0 left-0 w-full h-1 {% if issue.status == 'Closed' or issue.status == 'Resolved' %}bg-emerald-400{% else %}bg-indigo-500{% endif %}"></div>
+
+            <div class="flex justify-between items-start mb-5 mt-1">
+              <span class="px-3 pt-1.5 pb-2 rounded-lg text-xs font-black uppercase tracking-wider border 
+                {% if issue.status == 'Submitted' %}bg-gray-100 text-gray-800 border-gray-200
+                {% elif issue.status == 'Assigned' %}bg-blue-100 text-blue-800 border-blue-200
+                {% elif issue.status == 'In Progress' %}bg-indigo-100 text-indigo-800 border-indigo-200
+                {% elif issue.status == 'Resolved' %}bg-yellow-100 text-yellow-800 border-yellow-200
+                {% elif issue.status == 'Closed' %}bg-emerald-100 text-emerald-800 border-emerald-200
+                {% else %}bg-gray-100 text-gray-800 border-gray-200{% endif %}">
+                {{ issue.status }}
+              </span>
+              <span class="text-xs text-slate-400 font-mono bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                {{ issue.created_at|date:"M d, Y" }}
+              </span>
+            </div>
+            
+            <h3 class="font-bold text-slate-900 text-[1.1rem] leading-snug line-clamp-2 mb-4 group-hover:text-indigo-600 transition-colors">
+              {{ issue.description }}
+            </h3>
+            
+            <div class="flex items-center text-sm font-semibold text-slate-500 mt-auto bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+              <svg class="w-4 h-4 mr-2 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              <span class="truncate">{{ issue.category }} &bull; {{ issue.department.name }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </section>
+  </main>
+</div>
+
+<!-- ============================================================= -->
+<!-- MODAL: ISSUE DETAILS & PROOF OF FIX (DOSSIER)                 -->
+<!-- ============================================================= -->
+<div id="citizenIssueModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 z-50">
+  <div class="bg-white rounded-[2rem] shadow-2xl shadow-indigo-900/40 w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] border border-white/20">
+    
+    <div class="p-6 sm:px-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/80 backdrop-blur-xl">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 pb-1.5 mb-2 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] font-black tracking-widest uppercase">
+          <span id="dossierId">ID: C100</span>
+        </div>
+        <h3 class="text-2xl font-black text-slate-900 tracking-tight">Report Dossier</h3>
+      </div>
+      <button onclick="closeCitizenIssueModal()" class="p-2 sm:p-3 text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 rounded-full shadow-sm border border-slate-200 transition-colors">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="p-6 sm:p-10 overflow-y-auto flex-1 bg-white">
+      <!-- Resolution Timeline -->
+      <div class="bg-slate-50 border border-slate-100 rounded-3xl p-6 sm:p-8 mb-10 shadow-inner">
+        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Resolution Lifecycle</h4>
+        
+        <!-- Status Timeline Badges -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center" id="timelineBadges">
+          <div id="badge-Submitted" class="p-3 rounded-xl border font-bold text-xs">Submitted</div>
+          <div id="badge-Assigned" class="p-3 rounded-xl border font-bold text-xs">Assigned</div>
+          <div id="badge-In-Progress" class="p-3 rounded-xl border font-bold text-xs">In Progress</div>
+          <div id="badge-Resolved" class="p-3 rounded-xl border font-bold text-xs">Resolved</div>
+          <div id="badge-Closed" class="p-3 rounded-xl border font-bold text-xs">Closed</div>
+        </div>
+      </div>
+
+      <div class="relative mb-10 pl-6 border-l-4 border-indigo-500">
+        <p id="dossierDescription" class="text-xl sm:text-2xl font-bold text-slate-800 leading-relaxed">
+        </p>
+        <p class="mt-2 text-sm font-semibold text-slate-400 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span id="dossierDate">Submitted on date</span>
+        </p>
+      </div>
+
+      <!-- Image Comparison Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+        <!-- Original Submitted Image -->
+        <div class="space-y-3">
+          <h4 class="font-bold text-slate-500 text-xs uppercase tracking-widest flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Submitted Evidence
+          </h4>
+          <div class="aspect-[4/3] bg-slate-100 rounded-[2rem] overflow-hidden border-2 border-slate-200 shadow-sm relative group">
+            <img id="dossierOrigImg" src="" alt="Original" class="w-full h-full object-cover hidden" />
+            <div id="dossierNoOrigImg" class="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50">
+              <svg class="w-12 h-12 mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span class="font-bold tracking-wide">No Photo Attached</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resolution Proof Image -->
+        <div class="space-y-3">
+          <h4 id="dossierProofHeading" class="font-bold text-xs uppercase tracking-widest flex items-center gap-2 text-slate-400">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Operational Proof
+          </h4>
+          <div id="dossierProofContainer" class="aspect-[4/3] rounded-[2rem] overflow-hidden shadow-sm relative group border-2 border-slate-200 border-dashed bg-slate-50">
+            <img id="dossierProofImg" src="" alt="Fix Proof" class="w-full h-full object-cover hidden" />
+            <div id="dossierNoProof" class="w-full h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center bg-slate-50/50">
+              <svg class="w-12 h-12 mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span class="text-sm font-bold tracking-wide text-slate-500">Awaiting Operation</span>
+              <span class="text-xs mt-1 text-slate-400">Proof will appear upon resolution.</span>
+            </div>
+            <div id="dossierProofDateBadge" class="hidden absolute bottom-4 left-4 bg-emerald-900/80 backdrop-blur-md text-emerald-50 text-[10px] font-mono px-3 py-1.5 rounded-lg border border-emerald-700/50 shadow-lg">
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Incident Map -->
+      <div id="dossierMapWrapper" class="bg-slate-50 border border-slate-200 rounded-[2rem] p-6 shadow-sm hidden">
+        <h4 class="font-bold text-slate-500 text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Incident Coordinates
+        </h4>
+        <div id="citizen-dossier-map" class="h-60 rounded-[1.5rem] overflow-hidden border-2 border-white shadow-md"></div>
+      </div>
+    </div>
+
+    <div class="p-6 sm:px-10 border-t border-slate-100 bg-slate-50/80 backdrop-blur-xl flex justify-between items-center shrink-0 flex-wrap gap-3">
+      <button onclick="closeCitizenIssueModal()" class="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-2xl transition-all text-sm">
+        Dismiss
+      </button>
+
+      <!-- Formal Acknowledge & Close Action -->
+      <form id="citizenCloseForm" method="POST" action="{% url 'citizen_dashboard' %}" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="close_issue" />
+        <input type="hidden" name="issue_id" id="closeIssueDbId" value="" />
+        <button 
+          type="submit" 
+          id="btnAcknowledgeClose"
+          class="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl hover:-translate-y-0.5 transition-all shadow-xl shadow-emerald-600/30 flex items-center gap-2 text-sm"
+        >
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          Acknowledge & Close Complaint
+        </button>
+      </form>
+
+      <div id="badgeClosedArchive" class="hidden px-6 py-2.5 rounded-2xl bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+        <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+        Complaint Closed & Archived
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let citizenMap = null;
+
+  function toggleNotifications() {
+    const panel = document.getElementById('notifPanel');
+    panel.classList.toggle('hidden');
+  }
+
+  function markNotificationRead(notifId, issueId) {
+    fetch(`/citizen/notifications/${notifId}/read/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json'
+      }
+    }).then(() => {
+      window.location.reload();
+    }).catch(err => console.error(err));
+  }
+
+  function openCitizenIssueModal(dbId, id, desc, status, dept, cat, dateStr, timeStr, updatedDateStr, origImgUrl, proofImgUrl, lat, lng) {
+    document.getElementById('dossierId').innerText = `ID: #${id}`;
+    document.getElementById('dossierDescription').innerText = `"${desc}"`;
+    document.getElementById('dossierDate').innerText = `Submitted on ${dateStr} at ${timeStr}`;
+
+    // Setup Close form
+    document.getElementById('closeIssueDbId').value = dbId;
+    const closeForm = document.getElementById('citizenCloseForm');
+    const closedArchiveBadge = document.getElementById('badgeClosedArchive');
+
+    if (status === 'Closed') {
+      if (closeForm) closeForm.classList.add('hidden');
+      if (closedArchiveBadge) closedArchiveBadge.classList.remove('hidden');
+    } else if (status === 'Resolved' || status === 'In Progress') {
+      if (closeForm) closeForm.classList.remove('hidden');
+      if (closedArchiveBadge) closedArchiveBadge.classList.add('hidden');
+    } else {
+      if (closeForm) closeForm.classList.add('hidden');
+      if (closedArchiveBadge) closedArchiveBadge.classList.add('hidden');
+    }
+
+    // Timeline Highlighting
+    const order = ['Submitted', 'Assigned', 'In Progress', 'Resolved', 'Closed'];
+    const normStatus = (status === 'InProgress' || status === 'In Progress') ? 'In Progress' : status;
+    const currentIdx = order.indexOf(normStatus);
+
+    order.forEach((s, idx) => {
+      const idKey = s.replace(' ', '-');
+      const badge = document.getElementById(`badge-${idKey}`);
+      if (badge) {
+        if (idx <= currentIdx) {
+          if (normStatus === 'Closed') {
+            badge.className = "p-3 rounded-xl border font-bold text-xs bg-emerald-600 text-white border-emerald-700 shadow-md";
+          } else {
+            badge.className = "p-3 rounded-xl border font-bold text-xs bg-indigo-600 text-white border-indigo-700 shadow-md";
+          }
+        } else {
+          badge.className = "p-3 rounded-xl border font-bold text-xs bg-white text-slate-400 border-slate-200";
+        }
+      }
+    });
+
+    // Original Image
+    const origImg = document.getElementById('dossierOrigImg');
+    const noOrig = document.getElementById('dossierNoOrigImg');
+    if (origImgUrl) {
+      origImg.src = origImgUrl;
+      origImg.classList.remove('hidden');
+      noOrig.classList.add('hidden');
+    } else {
+      origImg.classList.add('hidden');
+      noOrig.classList.remove('hidden');
+    }
+
+    // Proof Image
+    const proofImg = document.getElementById('dossierProofImg');
+    const noProof = document.getElementById('dossierNoProof');
+    const proofHeading = document.getElementById('dossierProofHeading');
+    const proofWrap = document.getElementById('dossierProofContainer');
+    const proofBadge = document.getElementById('dossierProofDateBadge');
+
+    if (proofImgUrl) {
+      proofImg.src = proofImgUrl;
+      proofImg.classList.remove('hidden');
+      noProof.classList.add('hidden');
+      proofHeading.className = "font-bold text-xs uppercase tracking-widest flex items-center gap-2 text-emerald-600";
+      proofWrap.className = "aspect-[4/3] rounded-[2rem] overflow-hidden shadow-sm relative group border-2 bg-emerald-50 border-emerald-200 shadow-[0_10px_30px_-15px_rgba(5,150,105,0.3)]";
+      proofBadge.innerText = `Resolved: ${updatedDateStr}`;
+      proofBadge.classList.remove('hidden');
+    } else {
+      proofImg.classList.add('hidden');
+      noProof.classList.remove('hidden');
+      proofHeading.className = "font-bold text-xs uppercase tracking-widest flex items-center gap-2 text-slate-400";
+      proofWrap.className = "aspect-[4/3] rounded-[2rem] overflow-hidden shadow-sm relative group border-2 border-slate-200 border-dashed bg-slate-50";
+      proofBadge.classList.add('hidden');
+    }
+
+    // Map Coordinates
+    const mapWrap = document.getElementById('dossierMapWrapper');
+    if (lat && lng) {
+      mapWrap.classList.remove('hidden');
+      setTimeout(() => {
+        if (!citizenMap) {
+          citizenMap = L.map('citizen-dossier-map').setView([lat, lng], 14);
+          L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '&copy; Google Maps'
+          }).addTo(citizenMap);
+        } else {
+          citizenMap.setView([lat, lng], 14);
+          citizenMap.invalidateSize();
+        }
+        L.marker([lat, lng]).addTo(citizenMap);
+      }, 200);
+    } else {
+      mapWrap.classList.add('hidden');
+    }
+
+    document.getElementById('citizenIssueModal').classList.remove('hidden');
+  }
+
+  function closeCitizenIssueModal() {
+    document.getElementById('citizenIssueModal').classList.add('hidden');
+  }
+</script>
+{% endblock %}

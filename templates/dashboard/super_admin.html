@@ -1,0 +1,968 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Super Admin - Global Command - CivicConnect{% endblock %}
+
+{% block content %}
+<!-- Include Chart.js & Leaflet for Analytics & Geospatial Heatmap -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="min-h-screen bg-slate-50 font-sans pb-16">
+  <!-- Top Navigation Bar for Super Admin -->
+  <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 py-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-900 to-indigo-900 flex items-center justify-center text-white font-black text-lg shadow-md shadow-indigo-950/20">
+        SC
+      </div>
+      <div>
+        <h1 class="text-lg font-black text-slate-900 tracking-tight leading-tight">CivicConnect</h1>
+        <p class="text-xs font-semibold text-slate-500">Super Admin Command Center</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <!-- Universal Notification Bell -->
+      {% include 'includes/notification_bell.html' %}
+
+      <a href="{% url 'home' %}" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition no-underline flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Home
+      </a>
+      <div class="text-right hidden sm:block">
+        <p class="text-sm font-bold text-slate-800">{{ request.user.get_full_name|default:request.user.username }}</p>
+        <span class="inline-block px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+          Super Admin
+        </span>
+      </div>
+      <a href="{% url 'logout' %}" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition border border-rose-100 no-underline">
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <div class="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+    <!-- Premium Hero Header with Export Actions -->
+    <header class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-3xl p-8 md:p-12 shadow-2xl border border-slate-700/50">
+      <div class="absolute top-0 right-0 w-96 h-96 bg-indigo-500/20 rounded-full blur-[80px] -z-0 translate-x-1/2 -translate-y-1/2"></div>
+      <div class="absolute bottom-0 left-0 w-72 h-72 bg-blue-500/20 rounded-full blur-[80px] -z-0 -translate-x-1/2 translate-y-1/2"></div>
+      
+      <div class="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-indigo-100 text-xs font-bold tracking-wider uppercase mb-5 backdrop-blur-md shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span> Supreme Executive Command
+          </div>
+          <h1 class="text-4xl md:text-5xl font-black text-white tracking-tight leading-none mb-3">Global Analytics & Reporting</h1>
+          <p class="text-lg text-slate-300 max-w-xl font-medium">
+            Evaluate city-wide civic performance, monitor SLA thresholds, oversee municipal departments, and generate council reports.
+          </p>
+        </div>
+
+        <!-- Quick Report Export CTAs -->
+        <div class="flex flex-wrap items-center gap-3">
+          <a 
+            href="{% url 'super_admin_export_pdf' %}" 
+            target="_blank"
+            class="px-5 py-3 rounded-2xl bg-white text-slate-900 hover:bg-slate-100 font-black text-xs uppercase tracking-wider shadow-xl transition-all hover:-translate-y-0.5 flex items-center gap-2 no-underline"
+          >
+            <svg class="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Council Audit Report (Print / PDF)
+          </a>
+
+          <a 
+            href="{% url 'super_admin_export_csv' %}" 
+            class="px-5 py-3 rounded-2xl bg-indigo-600/80 hover:bg-indigo-600 text-white font-black text-xs uppercase tracking-wider border border-indigo-400/30 shadow-xl transition-all hover:-translate-y-0.5 flex items-center gap-2 no-underline"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export CSV Dataset
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Floating Navigation Tabs -->
+    <div class="flex flex-wrap items-center gap-2 md:gap-3 bg-white/70 backdrop-blur-md p-2 rounded-2xl border border-slate-200 shadow-sm w-full overflow-x-auto">
+      <button
+        id="tab-btn-overview"
+        onclick="switchTab('overview')"
+        class="px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap bg-slate-900 text-white shadow-lg shadow-slate-900/30 transform -translate-y-0.5"
+      >
+        Executive Overview & Analytics
+      </button>
+      <button
+        id="tab-btn-departments"
+        onclick="switchTab('departments')"
+        class="px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap text-slate-500 hover:text-slate-900 hover:bg-slate-100/80"
+      >
+        Infrastructure Depts ({{ departments|length }})
+      </button>
+      <button
+        id="tab-btn-admins"
+        onclick="switchTab('admins')"
+        class="px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap text-slate-500 hover:text-slate-900 hover:bg-slate-100/80"
+      >
+        Department Admins ({{ dept_admins|length }})
+      </button>
+      <button
+        id="tab-btn-workers"
+        onclick="switchTab('workers')"
+        class="px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap text-slate-500 hover:text-slate-900 hover:bg-slate-100/80"
+      >
+        Operatives Performance ({{ worker_performance|length }})
+      </button>
+      <button
+        id="tab-btn-reports"
+        onclick="switchTab('reports')"
+        class="px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap text-slate-500 hover:text-slate-900 hover:bg-slate-100/80"
+      >
+        Global Logs & Register ({{ issues|length }})
+      </button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: EXECUTIVE ANALYTICS & OVERVIEW      -->
+    <!-- ========================================== -->
+    <div id="tab-overview" class="space-y-8 animate-in fade-in duration-300">
+
+      <!-- SLA Breach Warning Alert (Module 8 Feature) -->
+      {% if metrics.sla_breach_count > 0 %}
+      <div class="bg-gradient-to-r from-rose-500/10 via-rose-500/5 to-transparent border-l-4 border-rose-600 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-rose-600/30">
+            <svg class="w-5 h-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-sm font-extrabold text-rose-900">SLA Breach Warning: {{ metrics.sla_breach_count }} Active Complaints Overdue</h4>
+            <p class="text-xs text-rose-700 font-medium">These issues have exceeded standard statutory resolution limits without certified closure.</p>
+          </div>
+        </div>
+        <button 
+          onclick="switchTab('reports'); document.getElementById('logStatusFilter').value = 'Overdue'; filterLogs();"
+          class="px-4 py-2 text-xs font-black uppercase tracking-wider text-rose-700 hover:text-white bg-rose-100 hover:bg-rose-600 rounded-xl transition border border-rose-200 shrink-0"
+        >
+          View Overdue Tickets
+        </button>
+      </div>
+      {% endif %}
+
+      <!-- 6 Executive KPI Metric Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <!-- 1. Total Load -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-md text-center relative overflow-hidden group hover:-translate-y-1 transition-transform">
+          <div class="absolute inset-x-0 bottom-0 h-1 bg-slate-900"></div>
+          <p class="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-1">Total Issues</p>
+          <h2 class="text-4xl font-black text-slate-900">{{ metrics.totalIssues|default:"0" }}</h2>
+          <p class="text-slate-400 text-xs mt-2 font-medium">System Volume</p>
+        </div>
+        
+        <!-- 2. Active Field Ops -->
+        <div class="bg-white rounded-3xl p-6 border border-indigo-100 shadow-md text-center relative overflow-hidden group hover:-translate-y-1 transition-transform">
+          <div class="absolute inset-x-0 bottom-0 h-1 bg-indigo-600"></div>
+          <p class="text-indigo-600 font-bold uppercase tracking-widest text-[10px] mb-1">In Progress</p>
+          <h2 class="text-4xl font-black text-indigo-900">{{ metrics.byStatus.InProgress|default:"0" }}</h2>
+          <p class="text-indigo-400 text-xs mt-2 font-medium">Active Operatives</p>
+        </div>
+
+        <!-- 3. Resolved Count -->
+        <div class="bg-white rounded-3xl p-6 border border-emerald-100 shadow-md text-center relative overflow-hidden group hover:-translate-y-1 transition-transform">
+          <div class="absolute inset-x-0 bottom-0 h-1 bg-emerald-500"></div>
+          <p class="text-emerald-600 font-bold uppercase tracking-widest text-[10px] mb-1">Resolved</p>
+          <h2 class="text-4xl font-black text-emerald-900">{{ metrics.resolved_count|default:"0" }}</h2>
+          <p class="text-emerald-500 text-xs mt-2 font-medium">Verified / Closed</p>
+        </div>
+
+        <!-- 4. Resolution Rate -->
+        <div class="bg-white rounded-3xl p-6 border border-blue-100 shadow-md text-center relative overflow-hidden group hover:-translate-y-1 transition-transform">
+          <div class="absolute inset-x-0 bottom-0 h-1 bg-blue-600"></div>
+          <p class="text-blue-600 font-bold uppercase tracking-widest text-[10px] mb-1">Resolution Rate</p>
+          <h2 class="text-4xl font-black text-blue-900">{{ metrics.resolution_rate }}%</h2>
+          <p class="text-blue-400 text-xs mt-2 font-medium">Completion Ratio</p>
+        </div>
+
+        <!-- 5. Average Turnaround -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-md text-center relative overflow-hidden group hover:-translate-y-1 transition-transform">
+          <div class="absolute inset-x-0 bottom-0 h-1 bg-amber-500"></div>
+          <p class="text-amber-600 font-bold uppercase tracking-widest text-[10px] mb-1">Avg Resolution</p>
+          <h2 class="text-3xl font-black text-slate-800 tracking-tight">{{ metrics.avg_resolution_time }}</h2>
+          <p class="text-slate-400 text-xs mt-2 font-medium">Time-to-Fix</p>
+        </div>
+
+        <!-- 6. SLA Breaches -->
+        <div class="bg-white rounded-3xl p-6 border {% if metrics.sla_breach_count > 0 %}border-rose-200 bg-rose-50/20{% else %}border-slate-200/80{% endif %} shadow-md text-center relative overflow-hidden group hover:-translate-y-1 transition-transform">
+          <div class="absolute inset-x-0 bottom-0 h-1 {% if metrics.sla_breach_count > 0 %}bg-rose-600{% else %}bg-slate-300{% endif %}"></div>
+          <p class="{% if metrics.sla_breach_count > 0 %}text-rose-600{% else %}text-slate-400{% endif %} font-bold uppercase tracking-widest text-[10px] mb-1">SLA Breaches</p>
+          <h2 class="text-4xl font-black {% if metrics.sla_breach_count > 0 %}text-rose-700{% else %}text-slate-800{% endif %}">{{ metrics.sla_breach_count }}</h2>
+          <p class="text-slate-400 text-xs mt-2 font-medium">Overdue Limit</p>
+        </div>
+      </div>
+
+      <!-- Status Distribution 5-Tiles Row -->
+      <div class="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm">
+        <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider mb-4">Lifecycle State Pipeline</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div class="p-4 rounded-2xl border-l-4 border-slate-500 text-slate-700 bg-slate-50 shadow-sm">
+            <p class="text-[10px] uppercase font-bold opacity-70 mb-1 tracking-wider">Submitted</p>
+            <p class="text-2xl font-black">{{ metrics.byStatus.Submitted|default:"0" }}</p>
+          </div>
+          <div class="p-4 rounded-2xl border-l-4 border-blue-500 text-blue-700 bg-blue-50 shadow-sm">
+            <p class="text-[10px] uppercase font-bold opacity-70 mb-1 tracking-wider">Assigned</p>
+            <p class="text-2xl font-black">{{ metrics.byStatus.Assigned|default:"0" }}</p>
+          </div>
+          <div class="p-4 rounded-2xl border-l-4 border-indigo-500 text-indigo-700 bg-indigo-50 shadow-sm">
+            <p class="text-[10px] uppercase font-bold opacity-70 mb-1 tracking-wider">In Progress</p>
+            <p class="text-2xl font-black">{{ metrics.byStatus.InProgress|default:"0" }}</p>
+          </div>
+          <div class="p-4 rounded-2xl border-l-4 border-amber-500 text-amber-700 bg-amber-50 shadow-sm">
+            <p class="text-[10px] uppercase font-bold opacity-70 mb-1 tracking-wider">Resolved</p>
+            <p class="text-2xl font-black">{{ metrics.byStatus.Resolved|default:"0" }}</p>
+          </div>
+          <div class="p-4 rounded-2xl border-l-4 border-emerald-500 text-emerald-700 bg-emerald-50 shadow-sm">
+            <p class="text-[10px] uppercase font-bold opacity-70 mb-1 tracking-wider">Closed</p>
+            <p class="text-2xl font-black">{{ metrics.byStatus.Closed|default:"0" }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Section: Category Volume Breakdown & Pipeline Doughnut -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Category Volume Breakdown (Bar Chart) -->
+        <div class="lg:col-span-2 bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+          <div class="mb-4">
+            <h3 class="text-lg font-black text-slate-900 tracking-tight">Category Volume Breakdown</h3>
+            <p class="text-xs text-slate-500 font-medium">Issue density across civic complaint classifications</p>
+          </div>
+          <div class="h-64 w-full">
+            <canvas id="categoryVolumeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- System Pipeline Status (Doughnut Chart) -->
+        <div class="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+          <div class="mb-4 text-center">
+            <h3 class="text-lg font-black text-slate-900 tracking-tight">Status Distribution</h3>
+            <p class="text-xs text-slate-500 font-medium">Share of active vs. resolved complaints</p>
+          </div>
+          <div class="h-56 w-full flex items-center justify-center">
+            <canvas id="statusPipelineChart"></canvas>
+          </div>
+          <div class="mt-4 pt-4 border-t border-slate-100 flex justify-around text-center text-xs">
+            <div>
+              <p class="font-bold text-slate-400 text-[10px] uppercase">Active</p>
+              <p class="font-black text-slate-800 text-base">{{ metrics.activeFieldOps }}</p>
+            </div>
+            <div>
+              <p class="font-bold text-emerald-500 text-[10px] uppercase">Resolved</p>
+              <p class="font-black text-emerald-700 text-base">{{ metrics.resolved_count }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Department Performance Scorecard with Rating Indicators (Module 8 Feature) -->
+      <div class="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+          <div>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight">Department Performance Scorecard</h3>
+            <p class="text-xs text-slate-500 font-medium">Comparative operational ratings and efficiency grades across municipal units</p>
+          </div>
+          <span class="bg-slate-100 text-slate-700 text-xs px-3 py-1.5 rounded-full font-bold">
+            {{ metrics.byDepartment|length }} Departments Active
+          </span>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-slate-200">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-50 text-slate-700 font-black border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                <th class="p-4">Department</th>
+                <th class="p-4">Admin Lead</th>
+                <th class="p-4 text-center">Total Volume</th>
+                <th class="p-4 text-center">Active</th>
+                <th class="p-4 text-center">Resolved</th>
+                <th class="p-4 text-center">Efficiency Rate</th>
+                <th class="p-4 text-center">SLA Breaches</th>
+                <th class="p-4 text-right">Performance Rating</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for dept in metrics.byDepartment %}
+              <tr class="hover:bg-slate-50/60 transition-colors">
+                <td class="p-4 font-bold text-slate-900 text-sm">{{ dept.name }}</td>
+                <td class="p-4 text-slate-600 font-medium">{{ dept.admin_name }}</td>
+                <td class="p-4 text-center font-bold font-mono text-slate-800">{{ dept.total }}</td>
+                <td class="p-4 text-center font-bold text-indigo-700 font-mono">{{ dept.active }}</td>
+                <td class="p-4 text-center font-bold text-emerald-700 font-mono">{{ dept.completed }}</td>
+                <td class="p-4 text-center">
+                  <div class="inline-flex items-center gap-2">
+                    <div class="w-16 bg-slate-100 rounded-full h-2 overflow-hidden hidden sm:block">
+                      <div class="bg-emerald-500 h-2 rounded-full" style="width: {{ dept.efficiency }}%"></div>
+                    </div>
+                    <span class="font-black text-xs">{{ dept.efficiency }}%</span>
+                  </div>
+                </td>
+                <td class="p-4 text-center font-bold {% if dept.sla_breaches > 0 %}text-rose-600{% else %}text-slate-400{% endif %} font-mono">
+                  {{ dept.sla_breaches }}
+                </td>
+                <td class="p-4 text-right">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black border {{ dept.rating_badge }}">
+                    <span>⭐ {{ dept.rating }}</span>
+                    <span>&bull; {{ dept.rating_label }}</span>
+                  </span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="8" class="p-6 text-center text-slate-400">No departments configured yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Geospatial Map: City-Wide Civic Array -->
+      <div class="bg-slate-900 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+        
+        <div class="mb-6 flex flex-col sm:flex-row justify-between sm:items-end gap-4 relative z-10">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <h3 class="text-2xl font-black text-white tracking-tight">Global Geospatial Array</h3>
+            </div>
+            <p class="text-slate-400 text-xs sm:text-sm">Every reported civic problem mapped across urban infrastructure territory.</p>
+          </div>
+          <div>
+            <span class="inline-block bg-slate-800 text-slate-300 px-4 py-2 rounded-full text-xs font-bold border border-slate-700 shadow-inner">
+              {{ issues|length }} Data Points Plotted
+            </span>
+          </div>
+        </div>
+
+        <div id="superadmin-map" class="h-96 w-full rounded-2xl overflow-hidden ring-4 ring-slate-800/80 shadow-[0_0_40px_rgba(0,0,0,0.5)] relative z-10"></div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: INFRASTRUCTURE DEPTS                -->
+    <!-- ========================================== -->
+    <div id="tab-departments" class="hidden space-y-8 animate-in fade-in duration-300">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Create Department Form -->
+        <div class="lg:col-span-1 border border-white bg-white/90 backdrop-blur-md rounded-3xl shadow-xl shadow-indigo-100/50 p-8 h-fit relative overflow-hidden group">
+          <div class="flex items-center space-x-3 mb-8">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <div>
+               <h2 class="text-xl font-black text-gray-900 tracking-tight">New Dept</h2>
+               <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Initialization</p>
+            </div>
+          </div>
+
+          <form method="POST" action="{% url 'super_admin_dashboard' %}" class="space-y-6">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_department" />
+
+            <div>
+              <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Department Name</label>
+              <input
+                type="text" required name="name"
+                class="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-medium text-gray-900"
+                placeholder="e.g. Roads & Transport"
+              />
+            </div>
+
+            <button
+              type="submit"
+              class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm uppercase tracking-wider shadow-lg shadow-indigo-500/30 transition-all hover:-translate-y-0.5"
+            >
+              Establish Department
+            </button>
+          </form>
+        </div>
+
+        <!-- Department Roster List -->
+        <div class="lg:col-span-2 space-y-4">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-xl font-black text-gray-900 tracking-tight">Active Infrastructure Departments</h3>
+            <span class="text-xs font-bold text-gray-400">{{ departments|length }} Registered</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for dept in departments %}
+            <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative">
+              <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
+                  {{ dept.name|slice:":2"|upper }}
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="startEditDept('{{ dept.id }}')" class="p-2 text-gray-400 hover:text-indigo-600 rounded-lg hover:bg-gray-50 transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  </button>
+                  <form method="POST" action="{% url 'super_admin_dashboard' %}" onsubmit="return confirm('Terminate this department?');" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_department" />
+                    <input type="hidden" name="department_id" value="{{ dept.id }}" />
+                    <button type="submit" class="p-2 text-gray-400 hover:text-rose-600 rounded-lg hover:bg-gray-50 transition">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <div id="dept-name-display-{{ dept.id }}">
+                <h4 class="text-lg font-bold text-gray-900 mb-1">{{ dept.name }}</h4>
+                <p class="text-xs text-gray-500">Admin: <strong>{{ dept.admin_user.get_full_name|default:dept.admin_user.username|default:"Unassigned" }}</strong></p>
+              </div>
+
+              <!-- Inline edit form -->
+              <form id="dept-edit-form-{{ dept.id }}" method="POST" action="{% url 'super_admin_dashboard' %}" class="hidden space-y-3 mt-2">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_department" />
+                <input type="hidden" name="department_id" value="{{ dept.id }}" />
+                <input type="text" name="name" value="{{ dept.name }}" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500" required />
+                <div class="flex gap-2">
+                  <button type="submit" class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg">Save</button>
+                  <button type="button" onclick="cancelEditDept('{{ dept.id }}')" class="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-bold rounded-lg">Cancel</button>
+                </div>
+              </form>
+            </div>
+            {% empty %}
+            <div class="col-span-2 p-8 text-center text-gray-400 bg-white rounded-2xl border border-gray-100">
+              No infrastructure departments created yet.
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: DEPARTMENT ADMINS                   -->
+    <!-- ========================================== -->
+    <div id="tab-admins" class="hidden space-y-8 animate-in fade-in duration-300">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Admin Provisioning Form -->
+        <div class="lg:col-span-1 bg-white rounded-3xl p-8 border border-slate-200/80 shadow-md">
+          <h3 id="admin-form-title" class="text-lg font-black text-slate-900 mb-2">Deploy Department Admin</h3>
+          <p class="text-xs text-slate-400 mb-6">Assign administrative command credentials to manage department operatives.</p>
+
+          <form id="adminForm" method="POST" action="{% url 'super_admin_dashboard' %}" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" id="admin_form_action" value="create_admin" />
+            <input type="hidden" name="user_id" id="admin_form_user_id" value="" />
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name</label>
+              <input type="text" name="admin_name" id="admin_input_name" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" placeholder="e.g. Marcus Vance" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Protocol</label>
+              <input type="email" name="admin_email" id="admin_input_email" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" placeholder="admin@city.gov" />
+            </div>
+
+            <div>
+              <label id="admin_password_label" class="block text-xs font-bold text-slate-700 uppercase mb-1">Security Key / Password</label>
+              <input type="password" name="admin_password" id="admin_input_password" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" placeholder="••••••••" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Department</label>
+              <select name="department_id" id="admin_input_dept" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                <option value="">Select Department...</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="pt-2 flex gap-3">
+              <button type="submit" id="admin_submit_btn" class="flex-1 py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition">
+                Deploy Admin
+              </button>
+              <button type="button" id="admin_cancel_btn" onclick="resetAdminForm()" class="hidden px-4 py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-xs transition">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Admins Table -->
+        <div class="lg:col-span-2 bg-white rounded-3xl p-8 border border-slate-200/80 shadow-md">
+          <h3 class="text-xl font-black text-slate-900 tracking-tight mb-4">Commanding Administrators</h3>
+          <div class="overflow-x-auto rounded-2xl border border-slate-200">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-50 text-slate-700 font-black border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                  <th class="p-4">Admin Name</th>
+                  <th class="p-4">Contact</th>
+                  <th class="p-4">Department</th>
+                  <th class="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {% for adm in dept_admins %}
+                <tr class="hover:bg-slate-50">
+                  <td class="p-4 font-bold text-slate-900">{{ adm.get_full_name|default:adm.username }}</td>
+                  <td class="p-4 text-slate-600 font-mono">{{ adm.email }}</td>
+                  <td class="p-4 font-semibold text-indigo-700">{{ adm.profile.department.name|default:"Unassigned" }}</td>
+                  <td class="p-4 text-right space-x-2">
+                    <button 
+                      onclick="editAdminDetails('{{ adm.id }}', '{{ adm.get_full_name|default:adm.username }}', '{{ adm.email }}', '{{ adm.profile.department.id|default:'' }}')"
+                      class="px-2.5 py-1 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition"
+                    >
+                      Edit
+                    </button>
+                    <form method="POST" action="{% url 'super_admin_dashboard' %}" onsubmit="return confirm('Revoke this admin access?');" class="inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="delete_admin" />
+                      <input type="hidden" name="user_id" value="{{ adm.id }}" />
+                      <button type="submit" class="px-2.5 py-1 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition">
+                        Revoke
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="p-6 text-center text-slate-400">No department admins deployed yet.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: OPERATIVES PERFORMANCE TRACKER      -->
+    <!-- ========================================== -->
+    <div id="tab-workers" class="hidden space-y-8 animate-in fade-in duration-300">
+      <div class="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-md">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+          <div>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight">Operatives Field Performance Tracker</h3>
+            <p class="text-xs text-slate-500 font-medium">Individual field worker task efficiency, completion speed, and reliability metrics</p>
+          </div>
+          <span class="bg-indigo-50 text-indigo-700 text-xs px-3 py-1.5 rounded-full font-bold border border-indigo-200">
+            {{ worker_performance|length }} Active Field Operatives
+          </span>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-slate-200">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-50 text-slate-700 font-black border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                <th class="p-4">Operative Name</th>
+                <th class="p-4">Department Affiliation</th>
+                <th class="p-4">Contact</th>
+                <th class="p-4 text-center">Total Tasks</th>
+                <th class="p-4 text-center">Active</th>
+                <th class="p-4 text-center">Completed</th>
+                <th class="p-4 text-center">Efficiency Rate</th>
+                <th class="p-4 text-center">SLA Breaches</th>
+                <th class="p-4 text-right">Performance Grade</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for wp in worker_performance %}
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="p-4 font-bold text-slate-900 text-sm">{{ wp.name }}</td>
+                <td class="p-4 font-semibold text-slate-700">{{ wp.department_name }}</td>
+                <td class="p-4 font-mono text-slate-500">{{ wp.email }}</td>
+                <td class="p-4 text-center font-bold font-mono text-slate-800">{{ wp.total_tasks }}</td>
+                <td class="p-4 text-center font-bold text-indigo-600 font-mono">{{ wp.active_tasks }}</td>
+                <td class="p-4 text-center font-bold text-emerald-600 font-mono">{{ wp.completed_tasks }}</td>
+                <td class="p-4 text-center">
+                  <div class="inline-flex items-center gap-2">
+                    <div class="w-16 bg-slate-100 rounded-full h-2 overflow-hidden hidden sm:block">
+                      <div class="bg-indigo-600 h-2 rounded-full" style="width: {{ wp.efficiency_rate }}%"></div>
+                    </div>
+                    <span class="font-black text-xs">{{ wp.efficiency_rate }}%</span>
+                  </div>
+                </td>
+                <td class="p-4 text-center font-bold {% if wp.sla_breaches > 0 %}text-rose-600{% else %}text-slate-400{% endif %} font-mono">
+                  {{ wp.sla_breaches }}
+                </td>
+                <td class="p-4 text-right">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black border {{ wp.badge_class }}">
+                    <span>⭐ {{ wp.rating }}</span>
+                    <span>&bull; {{ wp.status_label }}</span>
+                  </span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="9" class="p-8 text-center text-slate-400 font-medium">No operatives registered in the city grid yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 5: GLOBAL LOGS & AUDIT REGISTER        -->
+    <!-- ========================================== -->
+    <div id="tab-reports" class="hidden space-y-8 animate-in fade-in duration-300">
+      <div class="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-md">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+          <div>
+            <h3 class="text-2xl font-black text-slate-900 tracking-tight">City-Wide Civic Register</h3>
+            <p class="text-xs text-slate-500 font-medium">Real-time inspection audit stream of all user complaints, assignments, and evidence</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <select
+              id="logStatusFilter"
+              onchange="filterLogs()"
+              class="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="All">All Statuses ({{ issues|length }})</option>
+              <option value="Submitted">Submitted</option>
+              <option value="Assigned">Assigned</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Resolved">Resolved</option>
+              <option value="Closed">Closed</option>
+              <option value="Overdue">⚠️ Overdue / SLA Breached</option>
+            </select>
+
+            <a 
+              href="{% url 'super_admin_export_csv' %}"
+              class="px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition no-underline flex items-center gap-1.5"
+            >
+              Download CSV
+            </a>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-slate-200">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-50 text-slate-700 font-black border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                <th class="p-4 pl-6">ID & Date</th>
+                <th class="p-4">Department</th>
+                <th class="p-4">Category</th>
+                <th class="p-4">Priority & SLA</th>
+                <th class="p-4">Citizen</th>
+                <th class="p-4">Operative</th>
+                <th class="p-4 w-1/4">Description</th>
+                <th class="p-4 text-center">Evidence</th>
+                <th class="p-4 pr-6 text-right">State</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100" id="logsTableBody">
+              {% for issue in issues %}
+              <tr 
+                class="issue-row hover:bg-slate-50 transition-colors" 
+                data-status="{{ issue.status }}"
+                data-overdue="{% if issue.is_sla_breached %}true{% else %}false{% endif %}"
+              >
+                <td class="p-4 pl-6 font-mono text-xs">
+                  <div class="text-slate-900 font-extrabold">#{{ issue.complaint_id }}</div>
+                  <div class="text-[10px] text-slate-400 mt-0.5">{{ issue.created_at|date:"M d, Y" }}</div>
+                </td>
+                <td class="p-4 font-bold text-slate-800">{{ issue.department.name|default:"General" }}</td>
+                <td class="p-4 font-medium text-slate-600">{{ issue.category }}</td>
+                <td class="p-4">
+                  <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold 
+                    {% if issue.priority == 'High' %}bg-rose-50 text-rose-700 border border-rose-200
+                    {% elif issue.priority == 'Medium' %}bg-amber-50 text-amber-700 border border-amber-200
+                    {% else %}bg-slate-50 text-slate-700 border border-slate-200{% endif %}">
+                    {{ issue.priority }}
+                  </span>
+                  <div class="mt-1">
+                    <span class="text-[10px] font-bold {% if issue.is_sla_breached %}text-rose-600 font-extrabold animate-pulse{% else %}text-slate-400{% endif %}">
+                      {{ issue.sla_status_label }}
+                    </span>
+                  </div>
+                </td>
+                <td class="p-4 text-slate-600">{{ issue.citizen_name }}</td>
+                <td class="p-4 text-slate-600">{{ issue.worker_name }}</td>
+                <td class="p-4 text-slate-600">
+                  <span class="line-clamp-2 leading-relaxed">{{ issue.description }}</span>
+                </td>
+                <td class="p-4 text-center">
+                  {% if issue.image_url %}
+                  <a href="{{ issue.image_url }}" target="_blank" class="text-[11px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-100 no-underline transition inline-block">
+                    📸 Photo
+                  </a>
+                  {% endif %}
+                  {% if issue.completion_image_url %}
+                  <a href="{{ issue.completion_image_url }}" target="_blank" class="text-[11px] font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-100 no-underline transition inline-block mt-1">
+                    ✅ Proof
+                  </a>
+                  {% endif %}
+                  {% if not issue.image_url and not issue.completion_image_url %}
+                  <span class="text-[10px] text-slate-400 italic">None</span>
+                  {% endif %}
+                </td>
+                <td class="p-4 pr-6 text-right">
+                  <span class="inline-block px-2.5 py-1 rounded text-xs font-bold border 
+                    {% if issue.status == 'Submitted' %}border-slate-300 text-slate-700 bg-slate-50
+                    {% elif issue.status == 'Assigned' %}border-blue-200 text-blue-700 bg-blue-50
+                    {% elif issue.status == 'In Progress' %}border-indigo-200 text-indigo-700 bg-indigo-50
+                    {% elif issue.status == 'Resolved' %}border-amber-200 text-amber-700 bg-amber-50
+                    {% elif issue.status == 'Closed' %}border-emerald-200 text-emerald-700 bg-emerald-50
+                    {% else %}border-gray-200 text-gray-500 bg-white{% endif %}">
+                    {{ issue.status }}
+                  </span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="9" class="p-8 text-center text-slate-400 font-medium italic">
+                  No issues registered yet in the system.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Embedded JSON Data for Charts and Leaflet Map -->
+{{ metrics.byDepartment|json_script:"departments-data" }}
+{{ metrics.category_labels|json_script:"cat-labels-data" }}
+{{ metrics.category_values|json_script:"cat-values-data" }}
+{{ metrics.byStatus|json_script:"status-data" }}
+{{ issues_json|json_script:"issues-data" }}
+
+<script>
+  // Dynamic Tab Switcher Supporting all 5 tabs
+  function switchTab(tab) {
+    const tabs = ['overview', 'departments', 'admins', 'workers', 'reports'];
+    const activeBtnClass = "bg-slate-900 text-white shadow-lg shadow-slate-900/30 transform -translate-y-0.5";
+    const inactiveBtnClass = "text-slate-500 hover:text-slate-900 hover:bg-slate-100/80";
+
+    tabs.forEach(t => {
+      const panel = document.getElementById(`tab-${t}`);
+      const btn = document.getElementById(`tab-btn-${t}`);
+      if (panel && btn) {
+        if (t === tab) {
+          panel.classList.remove('hidden');
+          btn.className = `px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap ${activeBtnClass}`;
+        } else {
+          panel.classList.add('hidden');
+          btn.className = `px-5 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap ${inactiveBtnClass}`;
+        }
+      }
+    });
+
+    if (tab === 'overview' && window.superadminMap) {
+      setTimeout(() => window.superadminMap.invalidateSize(), 200);
+    }
+  }
+
+  // Department edit helpers
+  function startEditDept(id) {
+    document.getElementById(`dept-name-display-${id}`).classList.add('hidden');
+    document.getElementById(`dept-edit-form-${id}`).classList.remove('hidden');
+  }
+
+  function cancelEditDept(id) {
+    document.getElementById(`dept-name-display-${id}`).classList.remove('hidden');
+    document.getElementById(`dept-edit-form-${id}`).classList.add('hidden');
+  }
+
+  // Admin Form Edit Mode
+  function editAdminDetails(userId, name, email, deptId) {
+    document.getElementById('admin-form-title').innerText = "Update Admin";
+    document.getElementById('admin_form_action').value = "edit_admin";
+    document.getElementById('admin_form_user_id').value = userId;
+    document.getElementById('admin_input_name').value = name;
+    document.getElementById('admin_input_email').value = email;
+    document.getElementById('admin_password_label').innerText = "Password (Leave blank to keep current)";
+    document.getElementById('admin_input_password').required = false;
+    document.getElementById('admin_input_dept').value = deptId;
+    document.getElementById('admin_submit_btn').innerText = "Update Admin";
+    document.getElementById('admin_cancel_btn').classList.remove('hidden');
+    switchTab('admins');
+  }
+
+  function resetAdminForm() {
+    document.getElementById('admin-form-title').innerText = "Deploy Admin";
+    document.getElementById('admin_form_action').value = "create_admin";
+    document.getElementById('admin_form_user_id').value = "";
+    document.getElementById('admin_input_name').value = "";
+    document.getElementById('admin_input_email').value = "";
+    document.getElementById('admin_password_label').innerText = "Security Key / Password";
+    document.getElementById('admin_input_password').required = true;
+    document.getElementById('admin_input_dept').value = "";
+    document.getElementById('admin_submit_btn').innerText = "Deploy Admin";
+    document.getElementById('admin_cancel_btn').classList.add('hidden');
+  }
+
+  // Filter logs by status or overdue
+  function filterLogs() {
+    const filter = document.getElementById('logStatusFilter').value;
+    const rows = document.querySelectorAll('.issue-row');
+    rows.forEach(row => {
+      const status = row.getAttribute('data-status');
+      const isOverdue = row.getAttribute('data-overdue') === 'true';
+
+      if (filter === 'All') {
+        row.style.display = '';
+      } else if (filter === 'Overdue') {
+        row.style.display = isOverdue ? '' : 'none';
+      } else if (status === filter) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+
+  // Initialize Visual Charts & Google Maps Leaflet Layer
+  document.addEventListener('DOMContentLoaded', function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedTab = urlParams.get('tab') || 'overview';
+    switchTab(requestedTab);
+
+    const statusColors = {
+      Submitted: '#64748b',
+      Assigned: '#3b82f6',
+      'In Progress': '#6366f1',
+      InProgress: '#6366f1',
+      Resolved: '#f59e0b',
+      Closed: '#10b981'
+    };
+
+    // 1. Category Volume Breakdown Bar Chart
+    const catLabels = JSON.parse(document.getElementById('cat-labels-data')?.textContent || '[]');
+    const catValues = JSON.parse(document.getElementById('cat-values-data')?.textContent || '[]');
+    const catCanvas = document.getElementById('categoryVolumeChart');
+
+    if (catCanvas && catLabels.length > 0) {
+      new Chart(catCanvas, {
+        type: 'bar',
+        data: {
+          labels: catLabels,
+          datasets: [{
+            label: 'Complaints',
+            data: catValues,
+            backgroundColor: [
+              '#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'
+            ],
+            borderRadius: 8,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1 }
+            },
+            x: {
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Status Pipeline Doughnut Chart
+    const statusData = JSON.parse(document.getElementById('status-data')?.textContent || '{}');
+    const statusCanvas = document.getElementById('statusPipelineChart');
+
+    if (statusCanvas) {
+      new Chart(statusCanvas, {
+        type: 'doughnut',
+        data: {
+          labels: ['Submitted', 'Assigned', 'In Progress', 'Resolved', 'Closed'],
+          datasets: [{
+            data: [
+              statusData.Submitted || 0,
+              statusData.Assigned || 0,
+              statusData.InProgress || 0,
+              statusData.Resolved || 0,
+              statusData.Closed || 0,
+            ],
+            backgroundColor: ['#64748b', '#3b82f6', '#6366f1', '#f59e0b', '#10b981'],
+            borderWidth: 0,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          cutout: '70%'
+        }
+      });
+    }
+
+    // 3. Map Initialization with Google Maps Tiles (Eliminates 403 & API Key watermark)
+    const issuesData = JSON.parse(document.getElementById('issues-data')?.textContent || '[]');
+    const mapElement = document.getElementById('superadmin-map');
+    
+    if (mapElement) {
+      // Find valid coordinates from issues
+      const validIssue = issuesData.find(i => i.lat && i.lng);
+      const defaultLat = validIssue ? validIssue.lat : 18.2450;
+      const defaultLng = validIssue ? validIssue.lng : 75.6740;
+
+      window.superadminMap = L.map('superadmin-map').setView([defaultLat, defaultLng], 13);
+      
+      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps'
+      }).addTo(window.superadminMap);
+
+      issuesData.forEach(iss => {
+        if (iss.lat && iss.lng) {
+          const color = statusColors[iss.status] || '#3b82f6';
+          const marker = L.circleMarker([iss.lat, iss.lng], {
+            radius: iss.is_sla_breached ? 11 : 8,
+            fillColor: iss.is_sla_breached ? '#e11d48' : color,
+            color: iss.is_sla_breached ? '#ffe4e6' : '#ffffff',
+            weight: iss.is_sla_breached ? 3 : 2,
+            opacity: 1,
+            fillOpacity: 0.9
+          }).addTo(window.superadminMap);
+
+          let breachTag = iss.is_sla_breached ? '<b style="color: #e11d48;">⚠️ SLA BREACHED</b><br/>' : '';
+
+          marker.bindPopup(`
+            <div style="font-family: sans-serif; font-size: 13px; line-height: 1.4;">
+              <strong style="color: #0f172a; font-size: 14px;">#${iss.complaint_id} — ${iss.category}</strong><br/>
+              <span style="color: #475569; font-weight: 600;">Dept: ${iss.department}</span><br/>
+              <span style="color: #64748b;">${iss.description || ''}</span><br/>
+              <span style="color: #475569;">Operative: <strong>${iss.worker}</strong></span><br/>
+              ${breachTag}
+              <span style="display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 999px; font-weight: bold; font-size: 11px; background: ${color}20; color: ${color};">
+                ${iss.status}
+              </span>
+            </div>
+          `);
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

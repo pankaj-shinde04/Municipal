@@ -1,0 +1,675 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Worker Dashboard - Field Operative - CivicConnect{% endblock %}
+
+{% block content %}
+<!-- Include Leaflet for Marker Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<div class="min-h-screen bg-gray-50 font-sans pb-16">
+  <!-- Top Navigation Bar for Worker -->
+  <nav class="bg-white border-b border-gray-200 sticky top-0 z-40 px-6 py-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-700 flex items-center justify-center text-white font-black text-lg shadow-md shadow-emerald-600/20">
+        W
+      </div>
+      <div>
+        <h1 class="text-lg font-black text-gray-900 tracking-tight leading-tight">CivicConnect</h1>
+        <p class="text-xs font-semibold text-gray-500">Field Operative Dashboard &bull; {{ request.user.profile.department.name|default:"General Field" }}</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <!-- Universal Notification Bell -->
+      {% include 'includes/notification_bell.html' %}
+
+      <a href="{% url 'home' %}" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition no-underline flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Home
+      </a>
+      <div class="text-right hidden sm:block">
+        <p class="text-sm font-bold text-gray-800">{{ request.user.get_full_name|default:request.user.username }}</p>
+        <span class="inline-block px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+          Field Operative
+        </span>
+      </div>
+      <a href="{% url 'logout' %}" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition border border-rose-100 no-underline">
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <div class="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+    <!-- Premium Hero Header -->
+    <header class="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-slate-800 to-emerald-900 rounded-3xl p-8 md:p-12 shadow-2xl border border-indigo-700/50 mb-8">
+      <div class="absolute top-0 right-0 w-96 h-96 bg-indigo-500/20 rounded-full blur-[80px] -z-0 translate-x-1/2 -translate-y-1/2"></div>
+      <div class="absolute bottom-0 left-0 w-72 h-72 bg-emerald-500/20 rounded-full blur-[80px] -z-0 -translate-x-1/2 translate-y-1/2"></div>
+      
+      <div class="relative z-10">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-indigo-100 text-xs font-bold tracking-wider uppercase mb-5 backdrop-blur-md shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Field Operative
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black text-white tracking-tight leading-none mb-3">My Tasks</h1>
+        <p class="text-lg text-indigo-100/90 max-w-xl font-medium">
+          View your active field assignments, update progress, and upload photographic proof of completion.
+        </p>
+      </div>
+    </header>
+
+    <!-- Messages Display -->
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="p-4 rounded-2xl text-sm font-bold border shadow-sm {% if 'error' in msg.tags %}bg-rose-50 text-rose-700 border-rose-200{% else %}bg-emerald-50 text-emerald-700 border-emerald-200{% endif %}">
+          {{ msg }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Main Content: Active Queue & Completed Work -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Active Queue -->
+      <div class="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl shadow-indigo-100/50 border border-white p-8 relative overflow-hidden group">
+        <div class="absolute -inset-2 bg-gradient-to-br from-indigo-50 to-white -z-10 group-hover:from-indigo-100/50 transition-colors duration-500"></div>
+        
+        <div class="flex items-center justify-between mb-8">
+          <h2 class="text-2xl font-bold bg-gradient-to-r from-indigo-900 to-slate-800 bg-clip-text text-transparent">Active Queue</h2>
+          <span class="bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 border border-amber-200 text-xs font-bold px-4 py-1.5 rounded-full shadow-sm">
+            {{ active_issues|length }} Pending
+          </span>
+        </div>
+
+        {% if not active_issues %}
+          <div class="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200 shadow-sm">
+            <p class="text-gray-500 font-medium">No active tasks assigned to you right now.</p>
+          </div>
+        {% else %}
+          <div class="space-y-4">
+            {% for issue in active_issues %}
+            <div 
+              onclick="openIssueModal('{{ issue.complaint_id }}', '{{ issue.id }}', '{{ issue.description|escapejs }}', '{{ issue.status }}', '{{ issue.department.name|escapejs }}', '{{ issue.category|escapejs }}', '{{ issue.created_at|date:'M d, Y' }}', '{{ issue.image_url }}', '{{ issue.latitude|default:'' }}', '{{ issue.longitude|default:'' }}', '{{ issue.location_address|default:''|escapejs }}', '{{ issue.rejection_reason|default:''|escapejs }}')"
+              class="group/card cursor-pointer border border-gray-100 bg-white hover:bg-gradient-to-br hover:from-white hover:to-indigo-50/50 hover:border-indigo-200 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl p-6 relative overflow-hidden transform hover:-translate-y-1"
+            >
+              <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-400 to-blue-500 opacity-0 group-hover/card:opacity-100 transition-opacity"></div>
+              
+              <div class="flex justify-between items-start mb-3">
+                <span class="text-xs font-black px-2.5 py-1 rounded-md uppercase tracking-wider
+                  {% if issue.status == 'Assigned' %}bg-indigo-100 text-indigo-700
+                  {% else %}bg-blue-100 text-blue-700{% endif %}">
+                  {{ issue.status }}
+                </span>
+                <span class="text-xs text-gray-400 font-mono font-medium">
+                  {{ issue.created_at|date:"M d, Y" }}
+                </span>
+              </div>
+
+              <div class="text-xs font-black text-indigo-600 mb-1 tracking-wide uppercase">
+                {{ issue.complaint_id }} &bull; {{ issue.category }}
+              </div>
+
+              <p class="text-gray-900 font-bold text-lg line-clamp-2 mb-2 group-hover/card:text-indigo-700 transition-colors">
+                {{ issue.description }}
+              </p>
+
+              {% if issue.rejection_reason %}
+              <div class="bg-rose-50 border border-rose-200 rounded-xl p-3 mb-3 text-xs text-rose-900">
+                <span class="font-extrabold uppercase text-rose-800 block mb-0.5">⚠️ Rework Required by Admin:</span>
+                {{ issue.rejection_reason }}
+              </div>
+              {% endif %}
+              
+              {% if issue.location_address %}
+              <div class="flex items-center text-xs text-slate-600 font-medium mb-3 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                <svg class="w-4 h-4 mr-1.5 text-rose-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span class="truncate">{{ issue.location_address }}</span>
+              </div>
+              {% endif %}
+
+              <div class="flex items-center text-xs text-gray-500 font-medium pt-3 mt-auto border-t border-gray-50">
+                <svg class="w-4 h-4 mr-1.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                {{ issue.department.name }}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Completed Work -->
+      <div class="bg-emerald-50/50 backdrop-blur-md rounded-3xl shadow-lg border border-emerald-100 p-8">
+        <div class="flex items-center justify-between mb-8">
+          <h2 class="text-2xl font-bold text-emerald-950">Completed Work</h2>
+          <span class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-black px-4 py-1.5 rounded-full shadow-md shadow-emerald-500/20">
+            {{ completed_issues|length }} Fixed
+          </span>
+        </div>
+
+        {% if not completed_issues %}
+          <div class="text-center py-12 bg-white/60 rounded-2xl border border-dashed border-emerald-200">
+            <p class="text-emerald-700/60 font-medium">You haven't completed any tasks yet.</p>
+          </div>
+        {% else %}
+          <div class="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+            {% for issue in completed_issues %}
+            <div class="bg-white border border-emerald-100/60 hover:border-emerald-300 rounded-2xl p-5 flex gap-4 transition-colors shadow-sm">
+              {% if issue.completion_image %}
+                <div class="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-emerald-100 shadow-sm relative group">
+                  <img src="{{ issue.completion_image_url }}" alt="Fix" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                </div>
+              {% endif %}
+              <div class="flex flex-col justify-center">
+                <p class="text-emerald-950 font-bold line-clamp-2 leading-tight mb-2">{{ issue.description }}</p>
+                <p class="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded inline-flex items-center gap-1.5 w-max">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Resolved {{ issue.updated_at|date:"M d, Y" }}
+                </p>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- WORKER ACTION & NAVIGATION MODAL                              -->
+<!-- ============================================================= -->
+<div id="workerIssueModal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-100">
+    
+    <!-- Modal Header Image -->
+    <div class="h-44 sm:h-52 w-full bg-slate-900 relative" id="modalHeaderImgWrap">
+      <img id="modalIssueImg" src="" alt="Complaint" class="w-full h-full object-cover hidden" />
+      <div id="modalNoImgText" class="w-full h-full flex flex-col items-center justify-center text-slate-400 font-medium">
+        <svg class="w-10 h-10 mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        No Image Provided
+      </div>
+      <div id="modalCoordsBadge" class="absolute top-4 right-4 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-gray-900 shadow-sm hidden">
+      </div>
+    </div>
+
+    <div class="p-6 md:p-8 space-y-6">
+      <!-- Status Timeline -->
+      <div class="px-2 sm:px-6">
+        <div class="flex items-center justify-between relative">
+          <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-gray-200 -z-0"></div>
+          <div id="timelineProgress" class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-indigo-600 transition-all duration-500 -z-0" style="width: 25%;"></div>
+          
+          <div class="flex flex-col items-center relative z-10">
+            <div id="stepDot-Submitted" class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-md">1</div>
+            <span class="text-[10px] font-bold uppercase mt-1 text-indigo-700">Submitted</span>
+          </div>
+          <div class="flex flex-col items-center relative z-10">
+            <div id="stepDot-Assigned" class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-xs">2</div>
+            <span id="stepLabel-Assigned" class="text-[10px] font-bold uppercase mt-1 text-gray-400">Assigned</span>
+          </div>
+          <div class="flex flex-col items-center relative z-10">
+            <div id="stepDot-InProgress" class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-xs">3</div>
+            <span id="stepLabel-InProgress" class="text-[10px] font-bold uppercase mt-1 text-gray-400">In Progress</span>
+          </div>
+          <div class="flex flex-col items-center relative z-10">
+            <div id="stepDot-Resolved" class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-xs">4</div>
+            <span id="stepLabel-Resolved" class="text-[10px] font-bold uppercase mt-1 text-gray-400">Resolved</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Issue Details -->
+      <div>
+        <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+          <h3 class="text-2xl font-black text-gray-900 tracking-tight" id="modalComplaintId">Issue Details</h3>
+          <span id="modalDeptBadge" class="px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full text-xs font-bold"></span>
+        </div>
+        <p id="modalIssueDescription" class="text-gray-800 bg-gray-50 p-4 rounded-xl border border-gray-100 font-medium text-sm leading-relaxed mb-3">
+        </p>
+        <!-- Admin Rejection Notice (if rework was requested) -->
+        <div id="workerRejectionNotice" class="hidden bg-rose-50 border border-rose-200 p-4 rounded-xl text-rose-900 text-xs">
+          <div class="font-extrabold uppercase text-rose-800 mb-1 flex items-center gap-1.5">
+            ⚠️ Admin Rejection Notice & Rework Instructions
+          </div>
+          <p id="workerRejectionNoticeText" class="font-medium text-sm text-rose-950"></p>
+        </div>
+      </div>
+
+      <!-- Location, Route & Navigation Section -->
+      <div id="modalMapContainer" class="hidden space-y-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h4 class="font-extrabold text-gray-700 text-xs uppercase tracking-wider flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Citizen Problem Location & Route
+          </h4>
+          <div id="modalDistanceBadge" class="hidden"></div>
+        </div>
+
+        <!-- Problem Location Box -->
+        <div class="bg-gradient-to-r from-rose-50 via-amber-50 to-white border border-rose-200/70 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
+          <div class="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md text-base">
+            🚨
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2 flex-wrap mb-1">
+              <span class="text-[10px] font-black uppercase tracking-wider text-rose-800 bg-rose-100 px-2 py-0.5 rounded">Citizen's Reported Site</span>
+              <span id="modalCoordsText" class="text-xs font-mono font-bold text-slate-500"></span>
+            </div>
+            <p id="modalAddressText" class="text-sm font-bold text-slate-900 leading-snug">No street address available</p>
+          </div>
+        </div>
+
+        <!-- Interactive Map -->
+        <div class="rounded-2xl overflow-hidden border border-gray-200 shadow-sm relative" style="height: 260px;">
+          <div id="worker-modal-map" style="height: 100%; width: 100%;"></div>
+          
+          <!-- Map Legend -->
+          <div class="absolute bottom-2 left-2 z-[400] bg-white/95 backdrop-blur px-3 py-1.5 rounded-xl border border-gray-200 shadow-md text-[11px] font-bold text-gray-700 flex items-center gap-3">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Worker Base</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block"></span> Problem Site</span>
+            <span class="flex items-center gap-1"><span class="w-4 h-0.5 border-t-2 border-dashed border-blue-500 inline-block"></span> Route</span>
+          </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex items-center gap-3 flex-wrap pt-1">
+          <a id="modalNavBtn" href="#" target="_blank" class="flex-1 py-3 px-4 rounded-xl font-black text-white bg-blue-600 hover:bg-blue-700 transition shadow-md shadow-blue-500/20 text-center text-xs uppercase tracking-wider flex items-center justify-center gap-2 no-underline">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            Open Directions in Google Maps
+          </a>
+          <button type="button" onclick="useLiveWorkerGPS()" id="btnLiveGps" class="py-3 px-4 rounded-xl font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm">
+            <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            📍 Use Live GPS
+          </button>
+          <button type="button" onclick="saveAsBaseLocation()" id="btnSaveBase" class="hidden py-3 px-4 rounded-xl font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm">
+            💾 Save as Base
+          </button>
+        </div>
+      </div>
+
+      <!-- Hidden form to update worker base location -->
+      <form id="saveBaseLocationForm" method="POST" action="{% url 'worker_dashboard' %}" class="hidden">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_base_location" />
+        <input type="hidden" name="base_latitude" id="saveBaseLat" value="" />
+        <input type="hidden" name="base_longitude" id="saveBaseLng" value="" />
+      </form>
+
+      <!-- Status Actions Form -->
+      <form id="statusUpdateForm" method="POST" action="{% url 'worker_dashboard' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="issue_id" id="modalIssueId" value="" />
+        <input type="hidden" name="new_status" id="modalNewStatus" value="" />
+
+        <!-- 1. If Status is "Assigned" -->
+        <div id="actionAssignedSection" class="hidden">
+          <button 
+            type="button" 
+            onclick="submitStatusChange('In Progress')"
+            class="w-full py-4 rounded-xl font-black tracking-wider text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30 text-sm uppercase"
+          >
+            Start Work / Mark "In Progress"
+          </button>
+        </div>
+
+        <!-- 2. If Status is "InProgress" -->
+        <div id="actionInProgressSection" class="hidden space-y-4 bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+          <h4 class="font-bold text-indigo-900 text-sm">Action Required: Proof of Work</h4>
+          
+          <input 
+            type="file" accept="image/*" capture="environment" name="completion_image" id="completionImageInput" 
+            class="hidden" onchange="handleCompletionImageSelect(event)"
+          />
+          
+          <div 
+            onclick="document.getElementById('completionImageInput').click()"
+            id="completionDropZone"
+            class="h-32 rounded-xl flex items-center justify-center cursor-pointer border-2 border-dashed border-indigo-300 hover:border-indigo-400 transition-all bg-white overflow-hidden relative"
+          >
+            <span id="cameraPromptText" class="text-sm font-semibold text-indigo-600">📸 Take Photo of Completed Work</span>
+            <img id="completionImgPreview" src="" alt="Completion Proof" class="h-full w-full object-cover rounded-lg hidden" />
+          </div>
+
+          <button 
+            type="button" 
+            id="btnSubmitProof"
+            onclick="submitStatusChange('Resolved')"
+            disabled
+            class="w-full py-4 rounded-xl font-black tracking-wider text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 transition-all shadow-xl shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed mt-4 transform hover:-translate-y-0.5 text-sm uppercase"
+          >
+            Submit Proof & Resolve Issue
+          </button>
+        </div>
+      </form>
+
+      <button 
+        type="button" 
+        onclick="closeIssueModal()" 
+        class="w-full py-3 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all"
+      >
+        Close & Return
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let modalMap = null;
+  let workerMarker = null;
+  let problemMarker = null;
+  let routePolyline = null;
+
+  // Worker coordinates from server
+  const defaultWorkerLat = {% if worker_lat %}{{ worker_lat }}{% else %}null{% endif %};
+  const defaultWorkerLng = {% if worker_lng %}{{ worker_lng }}{% else %}null{% endif %};
+  const workerDisplayName = "{{ worker_name|escapejs }}";
+
+  let activeWorkerLat = defaultWorkerLat;
+  let activeWorkerLng = defaultWorkerLng;
+  let activeProblemLat = null;
+  let activeProblemLng = null;
+  let activeProblemComplaintId = '';
+  let activeProblemDesc = '';
+  let activeProblemAddress = '';
+
+  // Haversine formula in JS to compute km distance
+  function getDistanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371; // km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return (R * c).toFixed(1);
+  }
+
+  function updateTimeline(status) {
+    const steps = ['Submitted', 'Assigned', 'InProgress', 'Resolved'];
+    const normStatus = (status === 'In Progress' || status === 'InProgress') ? 'InProgress' : status;
+    const currentIdx = steps.indexOf(normStatus);
+
+    const progressPercent = currentIdx >= 0 ? (currentIdx / 3) * 100 : 25;
+    document.getElementById('timelineProgress').style.width = `${progressPercent}%`;
+
+    steps.forEach((s, idx) => {
+      const dot = document.getElementById(`stepDot-${s}`);
+      const label = document.getElementById(`stepLabel-${s}`);
+      if (dot) {
+        if (idx <= currentIdx) {
+          dot.className = "w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-md";
+          if (label) label.className = "text-[10px] font-bold uppercase mt-1 text-indigo-700";
+        } else {
+          dot.className = "w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-xs";
+          if (label) label.className = "text-[10px] font-bold uppercase mt-1 text-gray-400";
+        }
+      }
+    });
+  }
+
+  function renderModalMapAndRoute() {
+    if (!activeProblemLat || !activeProblemLng) return;
+
+    if (!modalMap) {
+      modalMap = L.map('worker-modal-map', {
+        zoomControl: true
+      }).setView([activeProblemLat, activeProblemLng], 14);
+
+      // High-resolution Google Maps tiles (zero API key, full deep-zoom coverage without 'Map data not yet available')
+      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps'
+      }).addTo(modalMap);
+    } else {
+      modalMap.invalidateSize();
+    }
+
+    // Clear previous markers & route
+    if (workerMarker) { modalMap.removeLayer(workerMarker); workerMarker = null; }
+    if (problemMarker) { modalMap.removeLayer(problemMarker); problemMarker = null; }
+    if (routePolyline) { modalMap.removeLayer(routePolyline); routePolyline = null; }
+
+    const bounds = [];
+
+    // 1. Problem Marker (Citizen Reported Spot)
+    const problemIcon = L.divIcon({
+      className: 'custom-problem-pin',
+      html: `<div style="background-color: #dc2626; color: white; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 3px solid white; box-shadow: 0 4px 10px rgba(220,38,38,0.45);">🚨</div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+      popupAnchor: [0, -17]
+    });
+
+    problemMarker = L.marker([activeProblemLat, activeProblemLng], { icon: problemIcon }).addTo(modalMap);
+    problemMarker.bindPopup(`
+      <div style="font-family: inherit; font-size: 12px; line-height: 1.4; min-width: 180px;">
+        <span style="background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 10px; display: inline-block; margin-bottom: 4px;">CITIZEN PROBLEM LOCATION</span>
+        <div style="font-weight: 800; color: #111827; font-size: 13px;">${activeProblemComplaintId}</div>
+        <div style="color: #4b5563; margin-top: 2px;">${activeProblemDesc}</div>
+        ${activeProblemAddress ? `<div style="color: #4338ca; font-weight: 600; margin-top: 4px;">📍 ${activeProblemAddress}</div>` : ''}
+        <div style="color: #9ca3af; font-size: 11px; margin-top: 3px; font-family: monospace;">Lat: ${parseFloat(activeProblemLat).toFixed(4)}, Lng: ${parseFloat(activeProblemLng).toFixed(4)}</div>
+      </div>
+    `).openPopup();
+    bounds.push([activeProblemLat, activeProblemLng]);
+
+    // 2. Worker Marker (Worker's Base or Current Live GPS)
+    const distBadge = document.getElementById('modalDistanceBadge');
+    const navBtn = document.getElementById('modalNavBtn');
+
+    if (activeWorkerLat && activeWorkerLng) {
+      const workerIcon = L.divIcon({
+        className: 'custom-worker-pin',
+        html: `<div style="background-color: #059669; color: white; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 3px solid white; box-shadow: 0 4px 10px rgba(5,150,105,0.45);">👷</div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+        popupAnchor: [0, -17]
+      });
+
+      workerMarker = L.marker([activeWorkerLat, activeWorkerLng], { icon: workerIcon }).addTo(modalMap);
+      workerMarker.bindPopup(`
+        <div style="font-family: inherit; font-size: 12px; line-height: 1.4;">
+          <span style="background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 10px; display: inline-block; margin-bottom: 4px;">YOUR POSITION</span>
+          <div style="font-weight: 800; color: #111827; font-size: 13px;">👷 ${workerDisplayName || 'Field Operative'}</div>
+          <div style="color: #6b7280; font-size: 11px; margin-top: 2px;">Worker Base Location</div>
+        </div>
+      `);
+      bounds.push([activeWorkerLat, activeWorkerLng]);
+
+      // 3. Draw Route Polyline
+      routePolyline = L.polyline([[activeWorkerLat, activeWorkerLng], [activeProblemLat, activeProblemLng]], {
+        color: '#2563eb',
+        weight: 4,
+        dashArray: '8, 8',
+        opacity: 0.9
+      }).addTo(modalMap);
+
+      const distanceKm = getDistanceKm(activeWorkerLat, activeWorkerLng, activeProblemLat, activeProblemLng);
+      if (distBadge) {
+        distBadge.innerHTML = `
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 shadow-sm">
+            <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+            Distance: ~${distanceKm} km to problem
+          </span>
+        `;
+        distBadge.classList.remove('hidden');
+      }
+
+      // Google Maps Turn-by-Turn Navigation link with origin and destination
+      if (navBtn) {
+        navBtn.href = `https://www.google.com/maps/dir/?api=1&origin=${activeWorkerLat},${activeWorkerLng}&destination=${activeProblemLat},${activeProblemLng}`;
+        navBtn.classList.remove('hidden');
+      }
+
+      // Automatically fit both points on screen
+      modalMap.fitBounds(bounds, { padding: [45, 45], maxZoom: 16 });
+    } else {
+      if (distBadge) distBadge.classList.add('hidden');
+      if (navBtn) {
+        navBtn.href = `https://www.google.com/maps/search/?api=1&query=${activeProblemLat},${activeProblemLng}`;
+        navBtn.classList.remove('hidden');
+      }
+      modalMap.setView([activeProblemLat, activeProblemLng], 15);
+    }
+  }
+
+  function useLiveWorkerGPS() {
+    const btn = document.getElementById('btnLiveGps');
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    btn.innerHTML = `<span class="inline-block animate-spin mr-1">⌛</span> Locating...`;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        activeWorkerLat = pos.coords.latitude;
+        activeWorkerLng = pos.coords.longitude;
+        btn.innerHTML = `✓ Live GPS Active`;
+        btn.className = "py-3 px-4 rounded-xl font-bold text-white bg-emerald-600 border border-emerald-600 text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm";
+        const saveBtn = document.getElementById('btnSaveBase');
+        if (saveBtn) saveBtn.classList.remove('hidden');
+        renderModalMapAndRoute();
+      },
+      (err) => {
+        btn.innerHTML = `📍 Use Live GPS`;
+        alert("Unable to fetch live device coordinates: " + err.message);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
+  function saveAsBaseLocation() {
+    if (!activeWorkerLat || !activeWorkerLng) {
+      alert("No active coordinates detected.");
+      return;
+    }
+    document.getElementById('saveBaseLat').value = activeWorkerLat;
+    document.getElementById('saveBaseLng').value = activeWorkerLng;
+    document.getElementById('saveBaseLocationForm').submit();
+  }
+
+  function openIssueModal(complaintId, dbId, desc, status, dept, cat, date, imgUrl, lat, lng, address, rejectionReason) {
+    document.getElementById('modalIssueId').value = dbId;
+    document.getElementById('modalComplaintId').innerText = `Issue #${complaintId}`;
+    document.getElementById('modalDeptBadge').innerText = `${dept} • ${cat}`;
+    document.getElementById('modalIssueDescription').innerText = desc;
+    updateTimeline(status);
+
+    // Rejection Notice
+    const rejBox = document.getElementById('workerRejectionNotice');
+    const rejText = document.getElementById('workerRejectionNoticeText');
+    if (rejectionReason) {
+      rejText.innerText = rejectionReason;
+      rejBox.classList.remove('hidden');
+    } else {
+      rejBox.classList.add('hidden');
+    }
+    
+    // Header Image
+    const imgEl = document.getElementById('modalIssueImg');
+    const noImgText = document.getElementById('modalNoImgText');
+    if (imgUrl) {
+      imgEl.src = imgUrl;
+      imgEl.classList.remove('hidden');
+      noImgText.classList.add('hidden');
+    } else {
+      imgEl.classList.add('hidden');
+      noImgText.classList.remove('hidden');
+    }
+
+    // Coords & Address setup
+    activeProblemComplaintId = complaintId;
+    activeProblemDesc = desc;
+    activeProblemAddress = address || '';
+
+    const badge = document.getElementById('modalCoordsBadge');
+    const mapWrap = document.getElementById('modalMapContainer');
+    const coordsText = document.getElementById('modalCoordsText');
+    const addressText = document.getElementById('modalAddressText');
+
+    if (lat && lng) {
+      activeProblemLat = parseFloat(lat);
+      activeProblemLng = parseFloat(lng);
+
+      badge.innerText = `Lat: ${activeProblemLat.toFixed(4)}, Lng: ${activeProblemLng.toFixed(4)}`;
+      badge.classList.remove('hidden');
+      coordsText.innerText = `${activeProblemLat.toFixed(4)}, ${activeProblemLng.toFixed(4)}`;
+      addressText.innerText = address || "Location recorded via GPS coordinates";
+      mapWrap.classList.remove('hidden');
+
+      setTimeout(() => {
+        renderModalMapAndRoute();
+      }, 250);
+    } else {
+      activeProblemLat = null;
+      activeProblemLng = null;
+      badge.classList.add('hidden');
+      mapWrap.classList.add('hidden');
+    }
+
+    // Actions depending on Status
+    const assignedSec = document.getElementById('actionAssignedSection');
+    const inProgressSec = document.getElementById('actionInProgressSection');
+
+    if (status === 'Assigned') {
+      assignedSec.classList.remove('hidden');
+      inProgressSec.classList.add('hidden');
+    } else if (status === 'In Progress' || status === 'InProgress') {
+      assignedSec.classList.add('hidden');
+      inProgressSec.classList.remove('hidden');
+    } else {
+      assignedSec.classList.add('hidden');
+      inProgressSec.classList.add('hidden');
+    }
+
+    document.getElementById('workerIssueModal').classList.remove('hidden');
+  }
+
+  function closeIssueModal() {
+    document.getElementById('workerIssueModal').classList.add('hidden');
+    document.getElementById('completionImgPreview').src = "";
+    document.getElementById('completionImgPreview').classList.add('hidden');
+    document.getElementById('cameraPromptText').classList.remove('hidden');
+    document.getElementById('btnSubmitProof').disabled = true;
+  }
+
+  function handleCompletionImageSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const preview = document.getElementById('completionImgPreview');
+        const promptText = document.getElementById('cameraPromptText');
+        const dropZone = document.getElementById('completionDropZone');
+        const submitBtn = document.getElementById('btnSubmitProof');
+
+        preview.src = e.target.result;
+        preview.classList.remove('hidden');
+        promptText.classList.add('hidden');
+        dropZone.className = "h-32 rounded-xl flex items-center justify-center cursor-pointer border-2 border-green-500 transition-all bg-white overflow-hidden relative";
+        submitBtn.disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function submitStatusChange(status) {
+    if (status === 'Resolved') {
+      const fileInput = document.getElementById('completionImageInput');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please upload a photo showing the completed work before resolving this issue.');
+        return;
+      }
+    }
+    document.getElementById('modalNewStatus').value = status;
+    document.getElementById('statusUpdateForm').submit();
+  }
+</script>
+{% endblock %}
